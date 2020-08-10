@@ -3,10 +3,11 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 plugins {
     kotlin("jvm") apply false
     id("java")
+    id("maven-publish")
 }
 
 
-group = "org.jetbrains.dokka"
+group = "com.virtuslab.dokka"
 version = "0.1.0"
 
 val language_version: String by project
@@ -55,5 +56,23 @@ java {
 tasks.whenTaskAdded {
     if ("bintray" in name) {
         enabled = false
+    }
+}
+
+publishing {
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri("https://maven.pkg.github.com/VirtusLab/dokka-site")
+            credentials {
+                username = project.findProperty("gpr.user") as String? ?: System.getenv("USERNAME")
+                password = project.findProperty("gpr.key") as String? ?: System.getenv("TOKEN")
+            }
+        }
+    }
+    publications {
+        register("gpr", MavenPublication::class) {
+            from(components["java"])
+        }
     }
 }
