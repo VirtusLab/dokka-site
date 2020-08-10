@@ -68,8 +68,6 @@ publishing {
             name = "GitHubPackages"
             url = uri("https://maven.pkg.github.com/VirtusLab/dokka-site")
             credentials {
-                print("Publishing as: " + githubUsername)
-                print(" Token length: " + githubToken?.length)
                 username = project.findProperty("gpr.user") as String? ?: githubUsername
                 password = project.findProperty("gpr.key") as String? ?: githubToken
             }

@@ -88,7 +88,8 @@ class SiteResourceManager(cxt: DokkaContext) : BaseStaticSiteProcessor(cxt) {
 
 
     override fun transform(input: RootPageNode): RootPageNode {
-        val images = File(root, "images").walkTopDown().filter { it.isFile }.map{ root.toPath().relativize(it.toPath()).toString() }
+        val images = File(root, "images").walkTopDown().filter { it.isFile }
+            .map { root.toPath().relativize(it.toPath()).toString() }
         val resources = listResources(input.children) + images
         val resourcePages = resources.map { path ->
             RendererSpecificResourcePage(path, emptyList(), RenderingStrategy.Write(File(root, path).readText()))

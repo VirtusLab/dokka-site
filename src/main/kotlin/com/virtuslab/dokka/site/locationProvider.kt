@@ -14,7 +14,7 @@ class StaticSiteLocationProviderFactory(val ctx: DokkaContext) : LocationProvide
     }
 }
 
-class StaticSiteLocationProvider(ctx: DokkaContext, pageNode: RootPageNode): DefaultLocationProvider(pageNode, ctx) {
+class StaticSiteLocationProvider(ctx: DokkaContext, pageNode: RootPageNode) : DefaultLocationProvider(pageNode, ctx) {
     override fun pathTo(node: PageNode, context: PageNode?): String =
         if (node is BaseStaticSiteProcessor.DocPageNode && node.dri.contains(docsRootDRI))
             "index"
