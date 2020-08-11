@@ -33,7 +33,7 @@ jobs:
         run: ./scripts/run-pre-build-checks
 
       - name: Build with Gradle
-        run: gradle build
+        run: gradle build dokkaHtml
 
       - name: Update gh-pages
         run: |
