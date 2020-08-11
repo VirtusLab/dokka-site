@@ -1,4 +1,4 @@
-package dokka.java.api.com.virtuslab.dokka.site
+package com.virtuslab.dokka.site
 
 import kotlinx.html.*
 import kotlinx.html.stream.createHTML

@@ -1,4 +1,4 @@
-package dokka.java.api.com.virtuslab.dokka.site
+package com.virtuslab.dokka.site
 
 import org.jetbrains.dokka.DokkaConfiguration
 import org.jetbrains.dokka.base.renderers.html.NavigationNode
