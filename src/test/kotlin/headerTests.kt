@@ -100,9 +100,9 @@ class TemplateFileTests {
             name: basePage
             ---
             # {{ pageName }}
-    
+
             {{content}}
-            
+
             ## {{ pageName }} end
             """.trimIndent()
 
@@ -131,7 +131,7 @@ class TemplateFileTests {
                 basePage to "md",
                 content to "html"
             )
-        ){
+        ) {
             assertEquals(
                 expected,
                 it.layouts["content"]!!.resolve(it).html.trim()
