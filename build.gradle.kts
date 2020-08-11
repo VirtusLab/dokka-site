@@ -80,3 +80,8 @@ publishing {
         }
     }
 }
+
+// Configure dokka
+tasks.dokkaHtml {
+    pluginsConfiguration += "ExternalDocsTooKey" to "documentation"
+}
