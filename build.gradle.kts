@@ -8,7 +8,7 @@ plugins {
 
 
 group = "com.virtuslab.dokka"
-version = "0.1.0"
+version = "0.1.0-alpha"
 
 val language_version: String by project
 
@@ -59,14 +59,19 @@ tasks.whenTaskAdded {
     }
 }
 
+val githubToken: String? by project
+val githubUsername: String? by project
+
 publishing {
     repositories {
         maven {
             name = "GitHubPackages"
             url = uri("https://maven.pkg.github.com/VirtusLab/dokka-site")
             credentials {
-                username = project.findProperty("gpr.user") as String? ?: System.getenv("USERNAME")
-                password = project.findProperty("gpr.key") as String? ?: System.getenv("TOKEN")
+                print("Publishing as: " + githubUsername)
+                print(" Token length: " + githubToken?.length)
+                username = project.findProperty("gpr.user") as String? ?: githubUsername
+                password = project.findProperty("gpr.key") as String? ?: githubToken
             }
         }
     }

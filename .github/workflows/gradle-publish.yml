@@ -29,5 +29,5 @@ jobs:
     - name: Publish to GitHub Packages
       run: gradle publish
       env:
-        USERNAME: ${{ env.GRADLE_PUBLISH_USER }}
-        TOKEN: ${{ env.GRADLE_PUBLISH_TOKEN }}
+        ORG_GRADLE_PROJECT_githubUsername: ${{ secrets.GRADLE_PUBLISH_USER }}
+        ORG_GRADLE_PROJECT_githubToken: ${{ secrets.GRADLE_PUBLISH_TOKEN }}
