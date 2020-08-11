@@ -24,10 +24,11 @@ jobs:
       - name: Build with Gradle
         run: gradle build
 
-      # The USERNAME and TOKEN need to correspond to the credentials environment variables used in
+      # The ORG_GRADLE_PROJECT_bintrayUser and ORG_GRADLE_PROJECT_bintrayKey
+      # need to correspond to the credentials environment variables used in
       # the publishing section of your build.gradle
-      - name: Publish to GitHub Packages
-        run: gradle publish
+      - name: Upload to Bintray
+        run: gradle bintrayUpload
         env:
-          ORG_GRADLE_PROJECT_githubUsername: ${{ secrets.GRADLE_PUBLISH_USER }}
-          ORG_GRADLE_PROJECT_githubToken: ${{ secrets.GRADLE_PUBLISH_TOKEN }}
+          ORG_GRADLE_PROJECT_bintrayUser: ${{ secrets.BINTRAY_USER }}
+          ORG_GRADLE_PROJECT_bintrayKey: ${{ secrets.BINTRAY_KEY }}

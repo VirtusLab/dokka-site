@@ -4,6 +4,7 @@ plugins {
     kotlin("jvm") apply false
     id("java")
     id("maven-publish")
+    id("com.jfrog.bintray")
 }
 
 
@@ -59,22 +60,25 @@ tasks.whenTaskAdded {
     }
 }
 
-val githubToken: String? by project
-val githubUsername: String? by project
+val bintrayKey: String? by project
+
+bintray {
+    user = "kromanowski"
+    key = project.findProperty("bintray_api_key") as String? ?: bintrayKey
+    setPublications("MavenJava")
+    publish = true
+    pkg(delegateClosureOf<com.jfrog.bintray.gradle.BintrayExtension.PackageConfig> {
+        repo = "releases"
+        userOrg = "romanowski"
+        name = project.name
+        setLicenses("Apache-2.0")
+        vcsUrl = "https://github.com/VirtusLab/dokka-site.git"
+    })
+}
 
 publishing {
-    repositories {
-        maven {
-            name = "GitHubPackages"
-            url = uri("https://maven.pkg.github.com/VirtusLab/dokka-site")
-            credentials {
-                username = project.findProperty("gpr.user") as String? ?: githubUsername
-                password = project.findProperty("gpr.key") as String? ?: githubToken
-            }
-        }
-    }
     publications {
-        register("gpr", MavenPublication::class) {
+        register<MavenPublication>("MavenJava") {
             from(components["java"])
         }
     }
