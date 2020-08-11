@@ -35,8 +35,15 @@ jobs:
       - name: Build with Gradle
         run: gradle build
 
-      - name: Upload Build Artifacts
-        uses: actions/upload-artifact@v2.1.3
-        with:
-          name: artifacts
-          path: build/libs
+      - name: Update gh-pages
+        run: |
+          if [ $GITHUB_REF = "refs/heads/master" ]; then
+             git config --global user.email "$(git log -1 --format=%ae)"
+             git config --global user.name "$(git log -1 --format=%an)"
+             git subtree add --prefix=our-site origin gh-pages
+             rm -r our-site/*
+             cp -r  build/dokka/html/* our-site
+             git add our-site
+             git commit -m "$(git log -1 --pretty=%B)"
+             git subtree push --prefix=our-site origin gh-pages
+          fi
