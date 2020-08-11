@@ -1,8 +1,5 @@
-package dokka.java.api
+package com.virtuslab.dokka.site
 
-import dokka.java.api.com.virtuslab.dokka.site.RenderingContext
-import dokka.java.api.com.virtuslab.dokka.site.TemplateFile
-import dokka.java.api.com.virtuslab.dokka.site.loadTemplateFile
 import org.junit.Test
 import org.junit.Assert.*
 import java.nio.file.Files

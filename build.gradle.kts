@@ -1,19 +1,18 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    kotlin("jvm") apply false
+    kotlin("jvm")
     id("java")
     id("maven-publish")
+    id("org.jetbrains.dokka")
     id("com.jfrog.bintray")
 }
 
-
 group = "com.virtuslab.dokka"
-version = "0.1.0-alpha"
-
-val language_version: String by project
+version = "0.1.0"
 
 tasks.withType(KotlinCompile::class).all {
+    val language_version: String by project
     kotlinOptions {
         freeCompilerArgs += "-Xjsr305=strict -Xskip-metadata-version-check -Xopt-in=kotlin.RequiresOptIn."
         languageVersion = language_version
@@ -30,18 +29,16 @@ repositories {
 }
 
 dependencies {
-    implementation("org.jetbrains.dokka:dokka-core:1.4-mc-1")
-    implementation("org.jetbrains.dokka:dokka-base:1.4-mc-1")
+    val dokka_version: String by project
+    compileOnly("org.jetbrains.dokka:dokka-core:$dokka_version")
+    implementation("org.jetbrains.dokka:dokka-base:$dokka_version")
     implementation("com.vladsch.flexmark:flexmark-all:0.42.12")
     implementation("nl.big-o:liqp:0.6.7")
     implementation("org.jetbrains.kotlinx:kotlinx-html-jvm:0.6.10")
 
     implementation("junit:junit:4.13")
-}
 
-apply {
-    plugin("org.jetbrains.kotlin.jvm")
-    plugin("java")
+    dokkaHtmlPlugin(project(":"))
 }
 
 // Gradle metadata
@@ -53,7 +50,7 @@ java {
 
 
 // Workaround for https://github.com/bintray/gradle-bintray-plugin/issues/267
-//  Manually disable bintray tasks added to the root project
+// Manually disable bintray tasks added to the root project
 tasks.whenTaskAdded {
     if ("bintray" in name) {
         enabled = false

@@ -1,4 +1,4 @@
-package dokka.java.api.com.virtuslab.dokka.site
+package com.virtuslab.dokka.site
 
 import com.vladsch.flexmark.ext.anchorlink.AnchorLinkExtension
 import com.vladsch.flexmark.ext.autolink.AutolinkExtension

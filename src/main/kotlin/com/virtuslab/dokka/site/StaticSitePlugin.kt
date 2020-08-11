@@ -1,4 +1,4 @@
-package dokka.java.api.com.virtuslab.dokka.site
+package com.virtuslab.dokka.site
 
 import org.jetbrains.dokka.CoreExtensions
 import org.jetbrains.dokka.base.DokkaBase
@@ -25,7 +25,7 @@ class StaticSitePlugin : DokkaPlugin() {
         }
     }
 
-    val dokkaJavadocPlugin by extending {
+    val customRenderer by extending {
         (CoreExtensions.renderer
                 providing { ctx -> ExternalDocsToolRenderer(ctx) }
                 override dokkaBase.htmlRenderer)
