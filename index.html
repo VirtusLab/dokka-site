@@ -7,13 +7,16 @@
   <body><h1>Dokka site</h1>
 <p><strong>Generate static documentation for in your dokka project</strong></p>
 <p><strong>Yes, this page was generated using dokka-site</strong></p>
-<p>You can learn more from out <a href="main/index.html">documentation</a>.</p>
+<p>You can learn more from out <a href="dokka-site/index.html">documentation</a>.</p>
 <h2>Getting started</h2>
-<p>To install our plugin in your project add following to your <code>build.html</code></p>
-<pre><code>tasks.dokkaHtml {
-    (pluginsConfiguration as MutableMap&lt;String, String&gt;) += &quot;ExternalDocsTooKey&quot; to &quot;documentation&quot;
+<p>To install our plugin in your project add following to your <code>build.html</code> (to generate documentation from <code>documentation</code> directory)</p>
+<pre><code>dependencies {
+    dokkaHtmlPlugin(&quot;com.virtuslab.dokka:dokka-site:0.1.0&quot;)
 }
 
+tasks.dokkaHtml {
+    (pluginsConfiguration as MutableMap&lt;String, String&gt;) += &quot;ExternalDocsTooKey&quot; to &quot;documentation&quot;
+}
 
 </code></pre>
 </body>
