@@ -201,9 +201,12 @@ class SitePagesCreator(cxt: DokkaContext) : BaseStaticSiteProcessor(cxt) {
 
             val markdownParser = MarkdownParser(logger = DokkaConsoleLogger)
             val docTag = try {
-                if (from.isDirectory) {
-                    Text("this is directory", emptyList()) // TODO handle this one
-                } else markdownParser.parseStringToDocNode(templateFile!!.rawCode)
+                val file = if (from.isDirectory) {
+                    val indexFiles = from.listFiles { file -> file.name == "index.md" || file.name == "index.html" }
+                    check(indexFiles!!.size == 1) { "ERROR: Multiple index pages found under ${from.path}" }
+                    loadTemplateFile(indexFiles.first())
+                } else templateFile
+                markdownParser.parseStringToDocNode(file!!.rawCode)
             } catch (e: Throwable) {
                 val msg = "Error rendering $from: ${e.message}"
                 println("ERROR: $msg") // TODO proper error handling
