@@ -202,7 +202,7 @@ class SitePagesCreator(cxt: DokkaContext) : BaseStaticSiteProcessor(cxt) {
             val markdownParser = MarkdownParser(logger = DokkaConsoleLogger)
             val docTag = try {
                 if (from.isDirectory) {
-                    Text("this is directory", emptyList())
+                    Text("this is directory", emptyList()) // TODO handle this one
                 } else markdownParser.parseStringToDocNode(templateFile!!.rawCode)
             } catch (e: Throwable) {
                 val msg = "Error rendering $from: ${e.message}"
@@ -210,7 +210,7 @@ class SitePagesCreator(cxt: DokkaContext) : BaseStaticSiteProcessor(cxt) {
                 Text(msg, emptyList())
             }
 
-            val content = DocTagToContentConverter.buildContent(
+            val contentNodes = DocTagToContentConverter.buildContent(
                 docTag,
                 DCI(dri, ContentKind.Empty),
                 mySoruceSet,
@@ -218,9 +218,9 @@ class SitePagesCreator(cxt: DokkaContext) : BaseStaticSiteProcessor(cxt) {
                 PropertyContainer.empty()
             )
 
-            val contentNodeRoot = ContentNodeRoot(DCI(dri, ContentKind.Empty), mySoruceSet, content)
+            val contentGroup = ContentGroup(contentNodes, DCI(dri, ContentKind.Empty), mySoruceSet, emptySet(), PropertyContainer.empty())
 
-            DocPageNode(from, templateFile, children.filter { !it.isIndexPage }, contentNodeRoot, resolvedPage, dri)
+            DocPageNode(from, templateFile, children.filter { !it.isIndexPage }, contentGroup, resolvedPage, dri)
         } catch (e: RuntimeException) {
             e.printStackTrace()
             null
@@ -229,17 +229,4 @@ class SitePagesCreator(cxt: DokkaContext) : BaseStaticSiteProcessor(cxt) {
     private fun loadFiles(): List<DocPageNode> =
         docsFile.listFiles()?.mapNotNull { renderDocs(it) } ?: emptyList()
 
-
-}
-
-data class ContentNodeRoot(
-    override val dci: DCI,
-    override val sourceSets: Set<DokkaConfiguration.DokkaSourceSet>,
-    override val children: List<ContentNode>,
-    override val style: Set<Style> = emptySet(),
-    override val extra: PropertyContainer<ContentNode> = PropertyContainer.empty()
-) : ContentNode {
-    override fun hasAnyContent() = children.isNotEmpty()
-
-    override fun withNewExtras(newExtras: PropertyContainer<ContentNode>): ContentNode = copy(extra = newExtras)
 }
