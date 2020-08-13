@@ -1,14 +1,17 @@
 package com.virtuslab.dokka.site
 
 import org.jetbrains.dokka.DokkaConfiguration
+import org.jetbrains.dokka.base.parsers.MarkdownParser
 import org.jetbrains.dokka.base.renderers.html.NavigationNode
 import org.jetbrains.dokka.base.renderers.html.NavigationPage
+import org.jetbrains.dokka.base.transformers.pages.comments.DocTagToContentConverter
 import org.jetbrains.dokka.links.DRI
 import org.jetbrains.dokka.model.Documentable
 import org.jetbrains.dokka.model.properties.PropertyContainer
 import org.jetbrains.dokka.pages.*
 import org.jetbrains.dokka.plugability.DokkaContext
 import org.jetbrains.dokka.transformers.pages.PageTransformer
+import org.jetbrains.dokka.utilities.DokkaConsoleLogger
 import java.io.File
 
 const val ExternalDocsTooKey = "ExternalDocsTooKey"
@@ -49,6 +52,7 @@ abstract class BaseStaticSiteProcessor(cxt: DokkaContext) : PageTransformer {
         private val from: File,
         private val template: TemplateFile?,
         override val children: List<DocPageNode>,
+        override val content: ContentNode,
         val resolved: ResolvedPage,
         override val dri: Set<DRI>,
         override val embeddedResources: List<String> = emptyList()
@@ -60,7 +64,6 @@ abstract class BaseStaticSiteProcessor(cxt: DokkaContext) : PageTransformer {
         fun title() = template?.title() ?: name
 
         override val documentable: Documentable? = null
-        override val content: ContentNode = PreRenderedContent(resolved.html, DCI(dri, ContentKind.Empty), mySoruceSet)
 
         override fun modified(
             name: String,
@@ -69,10 +72,10 @@ abstract class BaseStaticSiteProcessor(cxt: DokkaContext) : PageTransformer {
             embeddedResources: List<String>,
             children: List<PageNode>
         ): ContentPage =
-            DocPageNode(from, template, children.filterIsInstance<DocPageNode>(), resolved, dri, embeddedResources)
+            DocPageNode(from, template, children.filterIsInstance<DocPageNode>(), content, resolved, dri, embeddedResources)
 
         override fun modified(name: String, children: List<PageNode>): PageNode =
-            DocPageNode(from, template, children.filterIsInstance<DocPageNode>(), resolved, dri, embeddedResources)
+            DocPageNode(from, template, children.filterIsInstance<DocPageNode>(), content, resolved, dri, embeddedResources)
     }
 }
 
@@ -183,7 +186,8 @@ class SitePagesCreator(cxt: DokkaContext) : BaseStaticSiteProcessor(cxt) {
                 println("ERROR: Multiple index pages found ${children.filter { it.isIndexPage }}") // TODO proper error handling
 
             val templateFile = if (from.isDirectory) null else loadTemplateFile(from)
-            val content = try {
+
+            val resolvedPage = try {
                 val context = RenderingContext(emptyMap(), layouts)
                 if (from.isDirectory) {
                     children.find { it.isIndexPage }?.resolved ?: EmptyResolvedPage
@@ -194,7 +198,20 @@ class SitePagesCreator(cxt: DokkaContext) : BaseStaticSiteProcessor(cxt) {
                 ResolvedPage(msg, emptyList())
             }
 
-            DocPageNode(from, templateFile, children.filter { !it.isIndexPage }, content, dri)
+            val markdownParser = MarkdownParser(logger = DokkaConsoleLogger)
+            val docTag = markdownParser.parseStringToDocNode(templateFile!!.rawCode)
+
+            val content = DocTagToContentConverter.buildContent(
+                docTag,
+                DCI(dri, ContentKind.Empty),
+                mySoruceSet,
+                emptySet(),
+                PropertyContainer.empty()
+            )
+
+            val contentNodeRoot = ContentNodeRoot(DCI(dri, ContentKind.Empty), mySoruceSet, content)
+
+            DocPageNode(from, templateFile, children.filter { !it.isIndexPage }, contentNodeRoot, resolvedPage, dri)
         } catch (e: RuntimeException) {
             e.printStackTrace()
             null
@@ -203,4 +220,17 @@ class SitePagesCreator(cxt: DokkaContext) : BaseStaticSiteProcessor(cxt) {
     private fun loadFiles(): List<DocPageNode> =
         docsFile.listFiles()?.mapNotNull { renderDocs(it) } ?: emptyList()
 
+
+}
+
+data class ContentNodeRoot(
+    override val dci: DCI,
+    override val sourceSets: Set<DokkaConfiguration.DokkaSourceSet>,
+    override val children: List<ContentNode>,
+    override val style: Set<Style> = emptySet(),
+    override val extra: PropertyContainer<ContentNode> = PropertyContainer.empty()
+) : ContentNode {
+    override fun hasAnyContent() = children.isNotEmpty()
+
+    override fun withNewExtras(newExtras: PropertyContainer<ContentNode>): ContentNode = copy(extra = newExtras)
 }
