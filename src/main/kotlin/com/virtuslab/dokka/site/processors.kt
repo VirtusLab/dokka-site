@@ -7,6 +7,7 @@ import org.jetbrains.dokka.base.renderers.html.NavigationPage
 import org.jetbrains.dokka.base.transformers.pages.comments.DocTagToContentConverter
 import org.jetbrains.dokka.links.DRI
 import org.jetbrains.dokka.model.Documentable
+import org.jetbrains.dokka.model.doc.Text
 import org.jetbrains.dokka.model.properties.PropertyContainer
 import org.jetbrains.dokka.pages.*
 import org.jetbrains.dokka.plugability.DokkaContext
@@ -199,7 +200,15 @@ class SitePagesCreator(cxt: DokkaContext) : BaseStaticSiteProcessor(cxt) {
             }
 
             val markdownParser = MarkdownParser(logger = DokkaConsoleLogger)
-            val docTag = markdownParser.parseStringToDocNode(templateFile!!.rawCode)
+            val docTag = try {
+                if (from.isDirectory) {
+                    Text("this is directory", emptyList())
+                } else markdownParser.parseStringToDocNode(templateFile!!.rawCode)
+            } catch (e: Throwable) {
+                val msg = "Error rendering $from: ${e.message}"
+                println("ERROR: $msg") // TODO proper error handling
+                Text(msg, emptyList())
+            }
 
             val content = DocTagToContentConverter.buildContent(
                 docTag,
