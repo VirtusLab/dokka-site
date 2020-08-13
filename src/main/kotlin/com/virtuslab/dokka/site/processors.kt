@@ -116,7 +116,7 @@ class SitePagesCreator(cxt: DokkaContext) : BaseStaticSiteProcessor(cxt) {
         val defaultNavigation = (navigationPage.single() as NavigationPage).root
 
         val (indexes, children) = loadFiles().partition { it.isIndexPage }
-        if (indexes.size > 1) println("ERROR: Multiple index pages found ${children.filter { it.isIndexPage }}") // TODO proper error handling
+        if (indexes.size > 1) println("ERROR: Multiple index pages found ${children.filter { it.isIndexPage }}") // TODO (#14): provide proper error handling
 
         fun toNavigationNode(c: DocPageNode): NavigationNode =
             NavigationNode(
@@ -164,7 +164,7 @@ class SitePagesCreator(cxt: DokkaContext) : BaseStaticSiteProcessor(cxt) {
         } ?: rest
 
         val indexFiles = listOf(File(root, "index.html"), File(root, "index.md")).filter { it.exists() }
-        if (indexFiles.size > 1) println("ERROR: Multiple root index pages found: ${indexFiles.map { it.absolutePath }}") // TODO proper error handling
+        if (indexFiles.size > 1) println("ERROR: Multiple root index pages found: ${indexFiles.map { it.absolutePath }}") // TODO (#14): provide proper error handling
 
         val topLevelIndexPage = indexFiles.take(1)
             .mapNotNull { renderDocs(it, noChildren = true)?.modified(dri = setOf(docsRootDRI)) }
@@ -185,7 +185,7 @@ class SitePagesCreator(cxt: DokkaContext) : BaseStaticSiteProcessor(cxt) {
             val children =
                 if (noChildren) emptyList() else from.listFiles()?.mapNotNull { renderDocs(it) } ?: emptyList()
             if (children.count { it.isIndexPage } > 1)
-                println("ERROR: Multiple index pages found ${children.filter { it.isIndexPage }}") // TODO proper error handling
+                println("ERROR: Multiple index pages found ${children.filter { it.isIndexPage }}") // TODO (#14): provide proper error handling
 
             val templateFile = loadTemplateFile(
                 if (from.isDirectory) {
@@ -203,7 +203,7 @@ class SitePagesCreator(cxt: DokkaContext) : BaseStaticSiteProcessor(cxt) {
                 } else templateFile.resolve(context)
             } catch (e: Throwable) {
                 val msg = "Error rendering $from: ${e.message}"
-                println("ERROR: $msg") // TODO proper error handling
+                println("ERROR: $msg") // TODO (#14): provide proper error handling
                 ResolvedPage(msg, emptyList())
             }
 
@@ -215,7 +215,7 @@ class SitePagesCreator(cxt: DokkaContext) : BaseStaticSiteProcessor(cxt) {
                 parser.parseStringToDocNode(templateFile.rawCode)
             } catch (e: Throwable) {
                 val msg = "Error rendering $from: ${e.message}"
-                println("ERROR: $msg") // TODO proper error handling
+                println("ERROR: $msg") // TODO (#14): provide proper error handling
                 Text(msg, emptyList())
             }
 
@@ -231,7 +231,7 @@ class SitePagesCreator(cxt: DokkaContext) : BaseStaticSiteProcessor(cxt) {
 
             DocPageNode(from, templateFile, children.filter { !it.isIndexPage }, contentGroup, resolvedPage, dri)
         } catch (e: RuntimeException) {
-            e.printStackTrace() // TODO proper error handling
+            e.printStackTrace() // TODO (#14): provide proper error handling
             null
         }
 

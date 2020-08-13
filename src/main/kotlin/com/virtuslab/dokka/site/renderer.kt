@@ -18,11 +18,11 @@ class ExternalDocsToolRenderer(context: DokkaContext) : org.jetbrains.dokka.base
         }
     }
 
-    // TODO remove once html render has proper API
+    // TODO (#15): remove once html render has proper API
     private fun PageNode.root(path: String) = locationProvider.resolveRoot(this) + path
     private fun resolveLink(link: String, page: PageNode): String = if (URI(link).isAbsolute) link else page.root(link)
 
-    // TODO change API of HTML renderer
+    // TODO (#15): change API of HTML renderer
     override fun buildHtml(page: PageNode, resources: List<String>, content: FlowContent.() -> Unit) =
         when (page) {
             is BaseStaticSiteProcessor.DocPageNode ->
