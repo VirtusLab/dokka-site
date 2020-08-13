@@ -1,6 +1,7 @@
 package com.virtuslab.dokka.site
 
 import org.jetbrains.dokka.DokkaConfiguration
+import org.jetbrains.dokka.base.parsers.HtmlParser
 import org.jetbrains.dokka.base.parsers.MarkdownParser
 import org.jetbrains.dokka.base.renderers.html.NavigationNode
 import org.jetbrains.dokka.base.renderers.html.NavigationPage
@@ -186,27 +187,32 @@ class SitePagesCreator(cxt: DokkaContext) : BaseStaticSiteProcessor(cxt) {
             if (children.count { it.isIndexPage } > 1)
                 println("ERROR: Multiple index pages found ${children.filter { it.isIndexPage }}") // TODO proper error handling
 
-            val templateFile = if (from.isDirectory) null else loadTemplateFile(from)
+            val templateFile = loadTemplateFile(
+                if (from.isDirectory) {
+                    val indexFiles = from.listFiles { file -> file.name == "index.md" || file.name == "index.html" }
+                    check(indexFiles!!.size == 1) { "ERROR: Multiple index pages found under ${from.path}" } // ensured above too
+                    indexFiles.first()
+                } else from
+            )
+
 
             val resolvedPage = try {
                 val context = RenderingContext(emptyMap(), layouts)
                 if (from.isDirectory) {
                     children.find { it.isIndexPage }?.resolved ?: EmptyResolvedPage
-                } else templateFile!!.resolve(context)
+                } else templateFile.resolve(context)
             } catch (e: Throwable) {
                 val msg = "Error rendering $from: ${e.message}"
                 println("ERROR: $msg") // TODO proper error handling
                 ResolvedPage(msg, emptyList())
             }
 
-            val markdownParser = MarkdownParser(logger = DokkaConsoleLogger)
+            val parser =
+                if (templateFile.isHtml) HtmlParser()
+                else MarkdownParser(logger = DokkaConsoleLogger)
+
             val docTag = try {
-                val file = if (from.isDirectory) {
-                    val indexFiles = from.listFiles { file -> file.name == "index.md" || file.name == "index.html" }
-                    check(indexFiles!!.size == 1) { "ERROR: Multiple index pages found under ${from.path}" }
-                    loadTemplateFile(indexFiles.first())
-                } else templateFile
-                markdownParser.parseStringToDocNode(file!!.rawCode)
+                parser.parseStringToDocNode(templateFile.rawCode)
             } catch (e: Throwable) {
                 val msg = "Error rendering $from: ${e.message}"
                 println("ERROR: $msg") // TODO proper error handling
@@ -225,7 +231,7 @@ class SitePagesCreator(cxt: DokkaContext) : BaseStaticSiteProcessor(cxt) {
 
             DocPageNode(from, templateFile, children.filter { !it.isIndexPage }, contentGroup, resolvedPage, dri)
         } catch (e: RuntimeException) {
-            e.printStackTrace()
+            e.printStackTrace() // TODO proper error handling
             null
         }
 
