@@ -62,7 +62,7 @@ data class TemplateFile(val file: File, val rawCode: String, private val setting
     private fun stringSetting(name: String): String? {
         val list = settings.get(name)
         list?.also { assert(it.size == 1) { "Setting $name is a list in $settings" } }
-        return list?.let { it.first().removePrefix("\"").removeSuffix("\"") }
+        return list?.first()?.removePrefix("\"")?.removeSuffix("\"")
     }
 
     private fun listSetting(name: String): List<String> = settings.get(name) ?: emptyList()
@@ -70,11 +70,11 @@ data class TemplateFile(val file: File, val rawCode: String, private val setting
     internal val isHtml = file.name.endsWith(".html")
     fun name(): String = stringSetting("name") ?: file.name.removeSuffix(if (isHtml) ".html" else ".md")
     fun title(): String = stringSetting("title") ?: name()
-    private fun layout(): String? = stringSetting("layout")
+    fun layout(): String? = stringSetting("layout")
 
 
     fun resolve(ctx: RenderingContext): ResolvedPage =
-        resolveInner(ctx.copy(properties = HashMap<String, Any>(ctx.properties) + ("page" to mapOf("title" to title()))))
+        resolveInner(ctx.copy(properties = HashMap(ctx.properties) + ("page" to mapOf("title" to title()))))
 
     private fun resolveInner(ctx: RenderingContext): ResolvedPage {
         if (ctx.resolving.contains(file.absolutePath))
@@ -94,21 +94,24 @@ data class TemplateFile(val file: File, val rawCode: String, private val setting
 }
 
 const val ConfigSeparator = "---"
+const val LineSeparator = "\n"
 
 val yamlParser: Parser = Parser.builder(defaultMardownOptions).build()
 
 fun loadTemplateFile(file: File): TemplateFile {
-    var lines = file.readLines()
-    var config = emptyList<String>()
+    val lines = file.readLines()
 
-    if (lines.first() == ConfigSeparator) {
+    val (config, content) = if (lines.firstOrNull() == ConfigSeparator) {
         val index = lines.lastIndexOf(ConfigSeparator)
-        config = lines.take(index + 1)
-        lines = lines.drop(index + 1)
-    }
+        Pair(lines.take(index + 1), lines.drop(index + 1))
+    } else Pair(emptyList(), lines)
 
-    val configParsed = yamlParser.parse(config.joinToString("\n"))
+    val configParsed = yamlParser.parse(config.joinToString(LineSeparator))
     val yamlCollector = AbstractYamlFrontMatterVisitor()
     yamlCollector.visit(configParsed)
-    return TemplateFile(file, lines.joinToString("\n"), yamlCollector.data)
+
+    return TemplateFile(
+        file = file,
+        rawCode = content.joinToString(LineSeparator),
+        settings = yamlCollector.data)
 }
