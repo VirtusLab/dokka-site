@@ -1,6 +1,6 @@
 # Dokka site
 
-**Generate static documentation for in your dokka project**
+**Generate a static documentation for in your dokka project**
 
 
 
@@ -20,5 +20,4 @@ dependencies {
 tasks.dokkaHtml {
     (pluginsConfiguration as MutableMap<String, String>) += "ExternalDocsTooKey" to "documentation"
 }
-
 ```
