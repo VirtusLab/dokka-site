@@ -75,7 +75,7 @@ class TemplateFileTests {
         ) {
             assertEquals(
                 "<p>Ala <p>ma kota w <strong>paski</strong></p>\n. Hej!</p>",
-                it.layouts["content"]!!.resolve(it).html.trim()
+                it.layouts["content"]!!.resolve(it).code.trim()
             )
         }
     }
@@ -131,7 +131,7 @@ class TemplateFileTests {
         ) {
             assertEquals(
                 expected,
-                it.layouts["content"]!!.resolve(it).html.trim()
+                it.layouts["content"]!!.resolve(it).code.trim()
             )
         }
     }
@@ -144,7 +144,7 @@ class TemplateFileTests {
             """.trimIndent(),
             ext = "md"
         ) {
-            assertEquals("<h1>Hello there!</h1>", resolve(RenderingContext(mapOf("msg" to "there"))).html.trim())
+            assertEquals("<h1>Hello there!</h1>", resolve(RenderingContext(mapOf("msg" to "there"))).code.trim())
         }
     }
 
@@ -156,7 +156,7 @@ class TemplateFileTests {
             """.trimIndent(),
             ext = "md"
         ) {
-            assertEquals("<h1>Hello there!</h1>", resolve(RenderingContext(mapOf("msg" to "there"))).html.trim())
+            assertEquals("<h1>Hello there!</h1>", resolve(RenderingContext(mapOf("msg" to "there"))).code.trim())
         }
     }
 }

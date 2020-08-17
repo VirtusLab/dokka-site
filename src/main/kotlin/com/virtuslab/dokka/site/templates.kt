@@ -14,6 +14,7 @@ import com.vladsch.flexmark.parser.ParserEmulationProfile
 import com.vladsch.flexmark.util.options.DataHolder
 import com.vladsch.flexmark.util.options.MutableDataSet
 import liqp.Template
+import org.jetbrains.dokka.model.doc.DocTag
 import java.io.File
 import java.util.HashMap
 
@@ -43,7 +44,7 @@ data class RenderingContext(
     val markdownOptions: DataHolder = defaultMardownOptions,
     val resources: List<String> = emptyList()
 ) {
-    fun nest(code: String, path: String, resources: List<String>) =
+    internal fun nest(code: String, path: String, resources: List<String>) =
         copy(
             resolving = resolving + path,
             properties = properties + ("content" to code),
@@ -52,11 +53,12 @@ data class RenderingContext(
 }
 
 data class ResolvedPage(
-    val html: String,
+    val code: String,
+    val isHtml: Boolean = true,
     val resources: List<String> = emptyList()
 )
 
-val EmptyResolvedPage = ResolvedPage("")
+val EmptyResolvedPage = ResolvedPage(code = "")
 
 data class TemplateFile(val file: File, val rawCode: String, private val settings: Map<String, List<String>>) {
     private fun stringSetting(name: String): String? {
@@ -81,7 +83,7 @@ data class TemplateFile(val file: File, val rawCode: String, private val setting
             throw java.lang.RuntimeException("Cycle in templates involving $file: ${ctx.resolving}")
 
         val rendered = Template.parse(this.rawCode).render(HashMap(ctx.properties)) // Library requires mutable maps..
-        val code = if (isHtml) rendered else {
+        val code = if (!isHtml) rendered else {
             val parser: Parser = Parser.builder().build()
             HtmlRenderer.builder(ctx.markdownOptions).build().render(parser.parse(rendered))
         }
@@ -89,7 +91,7 @@ data class TemplateFile(val file: File, val rawCode: String, private val setting
         return layout()?.let {
             val layoutTemplate = ctx.layouts[it] ?: throw RuntimeException("No layouts named $it in ${ctx.layouts}")
             layoutTemplate.resolveInner(ctx.nest(code, file.absolutePath, resources))
-        } ?: ResolvedPage(code, resources + ctx.resources)
+        } ?: ResolvedPage(code, isHtml, resources + ctx.resources)
     }
 }
 

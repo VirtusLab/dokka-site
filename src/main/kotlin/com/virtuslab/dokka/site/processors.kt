@@ -195,28 +195,25 @@ class SitePagesCreator(cxt: DokkaContext) : BaseStaticSiteProcessor(cxt) {
                 } else from
             )
 
-
             val resolvedPage = try {
-                val context = RenderingContext(emptyMap(), layouts)
+                val context = RenderingContext(mapOf("content" to templateFile.rawCode), layouts)
                 if (from.isDirectory) {
                     children.find { it.isIndexPage }?.resolved ?: EmptyResolvedPage
-                } else if (templateFile.layout() != null ){
-                    templateFile.layout().let { layouts[it] }
-                        ?. resolve(context.nest(templateFile.rawCode, from.absolutePath, emptyList()))
-                        ?: throw Exception("Failed to resolve (layout '${templateFile.layout()}' might not be defined")
-                } else { // no layout
+                } else {
                     templateFile.resolve(context)
                 }
             } catch (e: Throwable) {
                 val msg = "Error rendering $from: ${e.message}"
                 println("ERROR: $msg") // TODO (#14): provide proper error handling
-                ResolvedPage(msg, emptyList())
+                ResolvedPage(msg)
             }
 
-            val parser = HtmlParser()
+            val parser =
+                if (resolvedPage.isHtml) HtmlParser()
+                else MarkdownParser(logger = DokkaConsoleLogger)
 
             val docTag = try {
-                parser.parseStringToDocNode(resolvedPage.html)
+                parser.parseStringToDocNode(resolvedPage.code)
             } catch (e: Throwable) {
                 val msg = "Error rendering $from: ${e.message}"
                 println("ERROR: $msg") // TODO (#14): provide proper error handling

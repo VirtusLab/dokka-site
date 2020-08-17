@@ -49,7 +49,7 @@ class ExternalDocsToolRenderer(context: DokkaContext) : org.jetbrains.dokka.base
                         script { unsafe { +"""var pathToRoot = "${locationProvider.resolveRoot(page)}";""" } }
                     }
                     body {
-                        unsafe { +page.resolved.html }
+                        unsafe { +page.resolved.code }
                     }
                 }
             else ->
