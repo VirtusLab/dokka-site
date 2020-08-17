@@ -6,7 +6,7 @@ import java.nio.file.Files
 
 class TemplateFileTests {
     private fun testTemplate(code: String, ext: String = "html", op: TemplateFile.() -> Unit) {
-        val tmpFile = Files.createTempFile("headerTests", ext).toFile()
+        val tmpFile = Files.createTempFile("headerTests", ".${ext}").toFile()
         try {
             tmpFile.writeText(code)
             val f = loadTemplateFile(tmpFile)
