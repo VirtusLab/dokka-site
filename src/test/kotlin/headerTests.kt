@@ -74,7 +74,7 @@ class TemplateFileTests {
             listOf(base to "html", content to "md")
         ) {
             assertEquals(
-                "<p>Ala <p>ma kota w <strong>paski</strong></p>\n. Hej!</p>",
+                "Ala ma kota w **paski**. Hej!",
                 it.layouts["content"]!!.resolve(it).code.trim()
             )
         }
@@ -144,7 +144,7 @@ class TemplateFileTests {
             """.trimIndent(),
             ext = "md"
         ) {
-            assertEquals("<h1>Hello there!</h1>", resolve(RenderingContext(mapOf("msg" to "there"))).code.trim())
+            assertEquals("# Hello there!", resolve(RenderingContext(mapOf("msg" to "there"))).code.trim())
         }
     }
 
@@ -156,7 +156,7 @@ class TemplateFileTests {
             """.trimIndent(),
             ext = "md"
         ) {
-            assertEquals("<h1>Hello there!</h1>", resolve(RenderingContext(mapOf("msg" to "there"))).code.trim())
+            assertEquals("# Hello there!", resolve(RenderingContext(mapOf("msg" to "there"))).code.trim())
         }
     }
 }
