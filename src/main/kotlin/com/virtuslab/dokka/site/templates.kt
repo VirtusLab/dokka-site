@@ -14,11 +14,10 @@ import com.vladsch.flexmark.parser.ParserEmulationProfile
 import com.vladsch.flexmark.util.options.DataHolder
 import com.vladsch.flexmark.util.options.MutableDataSet
 import liqp.Template
-import org.jetbrains.dokka.model.doc.DocTag
 import java.io.File
 import java.util.HashMap
 
-val defaultMardownOptions: DataHolder =
+val defaultMarkdownOptions: DataHolder =
     MutableDataSet()
         .setFrom(ParserEmulationProfile.KRAMDOWN.options)
         .set(
@@ -41,7 +40,7 @@ data class RenderingContext(
     val properties: Map<String, Any>,
     val layouts: Map<String, TemplateFile> = emptyMap(),
     val resolving: Set<String> = emptySet(),
-    val markdownOptions: DataHolder = defaultMardownOptions,
+    val markdownOptions: DataHolder = defaultMarkdownOptions,
     val resources: List<String> = emptyList()
 ) {
     internal fun nest(code: String, path: String, resources: List<String>) =
@@ -69,10 +68,10 @@ data class TemplateFile(val file: File, val rawCode: String, private val setting
 
     private fun listSetting(name: String): List<String> = settings.get(name) ?: emptyList()
 
-    internal val isHtml = file.name.endsWith(".html")
+    private val isHtml = file.name.endsWith(".html")
     fun name(): String = stringSetting("name") ?: file.name.removeSuffix(if (isHtml) ".html" else ".md")
     fun title(): String = stringSetting("title") ?: name()
-    fun layout(): String? = stringSetting("layout")
+    private fun layout(): String? = stringSetting("layout")
 
 
     fun resolve(ctx: RenderingContext): ResolvedPage =
@@ -98,7 +97,7 @@ data class TemplateFile(val file: File, val rawCode: String, private val setting
 const val ConfigSeparator = "---"
 const val LineSeparator = "\n"
 
-val yamlParser: Parser = Parser.builder(defaultMardownOptions).build()
+val yamlParser: Parser = Parser.builder(defaultMarkdownOptions).build()
 
 fun loadTemplateFile(file: File): TemplateFile {
     val lines = file.readLines()

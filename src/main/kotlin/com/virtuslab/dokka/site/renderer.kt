@@ -11,8 +11,7 @@ class ExternalDocsToolRenderer(context: DokkaContext) : org.jetbrains.dokka.base
     override fun buildPageContent(context: FlowContent, page: ContentPage) {
         context.buildNavigation(page)
         fun FlowContent.render(txt: String) = div { unsafe { +txt } }
-        val content = page.content
-        when (content) {
+        when (val content = page.content) {
             is PreRenderedContent -> context.render(content.html)
             else -> page.content.build(context, page)
         }

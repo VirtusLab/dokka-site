@@ -21,16 +21,16 @@ class TemplateFileTests {
         template: List<Pair<String, String>>,
         op: (RenderingContext) -> Unit
     ) {
-        fun rec(cxt: RenderingContext, remaning: List<Pair<String, String>>) {
-            if (remaning.isEmpty()) op(cxt)
+        fun rec(cxt: RenderingContext, remaining: List<Pair<String, String>>) {
+            if (remaining.isEmpty()) op(cxt)
             else {
-                val (code, ext) = remaning.first()
+                val (code, ext) = remaining.first()
                 testTemplate(code, ext) {
-                    rec(cxt.copy(layouts = cxt.layouts + (name() to this)), remaning.drop(1))
+                    rec(cxt.copy(layouts = cxt.layouts + (name() to this)), remaining.drop(1))
                 }
             }
         }
-        rec(RenderingContext(props), template.toList())
+        rec(RenderingContext(props), template)
     }
 
 
@@ -75,7 +75,7 @@ class TemplateFileTests {
         ) {
             assertEquals(
                 "Ala ma kota w **paski**. Hej!",
-                it.layouts["content"]!!.resolve(it).code.trim()
+                it.layouts.getValue("content").resolve(it).code.trim()
             )
         }
     }
@@ -131,7 +131,7 @@ class TemplateFileTests {
         ) {
             assertEquals(
                 expected,
-                it.layouts["content"]!!.resolve(it).code.trim()
+                it.layouts.getValue("content").resolve(it).code.trim()
             )
         }
     }
@@ -149,7 +149,7 @@ class TemplateFileTests {
     }
 
     @Test
-    fun mixedTeplates() {
+    fun mixedTemplates() {
         testTemplate(
             """
             # Hello {{ msg }}!

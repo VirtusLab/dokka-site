@@ -7,7 +7,7 @@ import org.jetbrains.dokka.pages.PageNode
 import org.jetbrains.dokka.pages.RootPageNode
 import org.jetbrains.dokka.plugability.DokkaContext
 
-class StaticSiteLocationProviderFactory(val ctx: DokkaContext) : LocationProviderFactory {
+class StaticSiteLocationProviderFactory(private val ctx: DokkaContext) : LocationProviderFactory {
     override fun getLocationProvider(pageNode: RootPageNode): LocationProvider {
         return StaticSiteLocationProvider(ctx, pageNode)
     }

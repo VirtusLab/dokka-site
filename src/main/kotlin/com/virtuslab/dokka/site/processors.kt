@@ -42,7 +42,7 @@ abstract class BaseStaticSiteProcessor(cxt: DokkaContext) : PageTransformer {
     private val rawRoot: File? = cxt.configuration.pluginsConfiguration.get(ExternalDocsTooKey)?.let { File(it) }
     val root = rawRoot ?: File("unknown")
 
-    protected val mySoruceSet = cxt.configuration.sourceSets.toSet()
+    protected val mySourceSet = cxt.configuration.sourceSets.toSet()
     protected val docsFile = File(root, "docs")
 
     protected fun File.asDri(): DRI {
@@ -84,9 +84,8 @@ abstract class BaseStaticSiteProcessor(cxt: DokkaContext) : PageTransformer {
 class SiteResourceManager(cxt: DokkaContext) : BaseStaticSiteProcessor(cxt) {
     private fun listResources(nodes: List<PageNode>): Set<String> =
         nodes.flatMap {
-            when {
-                it is DocPageNode ->
-                    listResources(it.children) + it.resolved.resources
+            when (it) {
+                is DocPageNode -> listResources(it.children) + it.resolved.resources
                 else -> emptySet()
             }
         }.toSet()
@@ -122,7 +121,7 @@ class SitePagesCreator(cxt: DokkaContext) : BaseStaticSiteProcessor(cxt) {
             NavigationNode(
                 c.title(),
                 c.dri.first(),
-                mySoruceSet,
+                mySourceSet,
                 c.children.map { toNavigationNode(it) }
             )
 
@@ -223,12 +222,12 @@ class SitePagesCreator(cxt: DokkaContext) : BaseStaticSiteProcessor(cxt) {
             val contentNodes = DocTagToContentConverter.buildContent(
                 docTag,
                 DCI(dri, ContentKind.Empty),
-                mySoruceSet,
+                mySourceSet,
                 emptySet(),
                 PropertyContainer.empty()
             )
 
-            val contentGroup = ContentGroup(contentNodes, DCI(dri, ContentKind.Empty), mySoruceSet, emptySet(), PropertyContainer.empty())
+            val contentGroup = ContentGroup(contentNodes, DCI(dri, ContentKind.Empty), mySourceSet, emptySet(), PropertyContainer.empty())
 
             DocPageNode(from, templateFile, children.filter { !it.isIndexPage }, contentGroup, resolvedPage, dri)
         } catch (e: RuntimeException) {
