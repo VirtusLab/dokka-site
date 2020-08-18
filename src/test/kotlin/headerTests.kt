@@ -74,14 +74,14 @@ class TemplateFileTests {
             listOf(base to "html", content to "md")
         ) {
             assertEquals(
-                "Ala ma kota w **paski**. Hej!",
+                "<p>Ala ma kota w <strong>paski</strong>. Hej!</p>",
                 it.layouts.getValue("content").resolve(it).code.trim()
             )
         }
     }
 
     @Test
-    fun nestedLayout() {
+    fun nestedLayout_htmlMdHtml() {
         val toplevel =
             """
             ---
@@ -127,6 +127,63 @@ class TemplateFileTests {
                 toplevel to "html",
                 basePage to "md",
                 content to "html"
+            )
+        ) {
+            assertEquals(
+                expected,
+                it.layouts.getValue("content").resolve(it).code.trim()
+            )
+        }
+    }
+
+    @Test
+    fun nestedLayout_mdHtmlMd() {
+        val toplevel =
+            """
+            ---
+            name: toplevel
+            ---
+            # The Page
+            {{ content }}
+            """.trimIndent()
+
+        val basePage =
+            """
+            ---
+            layout: toplevel
+            name: basePage
+            ---
+            <h2>{{ pageName }}</h2>
+
+            {{content}}
+
+            <h3>{{ pageName }} end</h3>
+            """.trimIndent()
+
+        val content =
+            """
+            ---
+            layout: basePage
+            name: content
+            ---
+            Hello {{ name }}!
+            """.trimIndent()
+
+
+        val expected =
+            """ 
+                <h1>The Page</h1>
+                <h2>Test page</h2>
+                <p>Hello world!!</p>
+                <h3>Test page end</h3>
+            """.trimIndent()
+
+        testTemplates(
+            mapOf("pageName" to "Test page", "name" to "world!"),
+            listOf(
+                toplevel to "md",
+                basePage to "html",
+                content to "md"
             )
         ) {
             assertEquals(

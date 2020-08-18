@@ -75,21 +75,21 @@ data class TemplateFile(val file: File, val rawCode: String, private val setting
 
 
     fun resolve(ctx: RenderingContext): ResolvedPage =
-        resolveInner(ctx.copy(properties = HashMap(ctx.properties) + ("page" to mapOf("title" to title()))))
+        resolveInner(ctx.copy(properties = HashMap(ctx.properties) + ("page" to mapOf("title" to title()))), hasHtmlContent = false)
 
-    private fun resolveInner(ctx: RenderingContext): ResolvedPage {
+    private fun resolveInner(ctx: RenderingContext, hasHtmlContent: Boolean): ResolvedPage {
         if (ctx.resolving.contains(file.absolutePath))
             throw java.lang.RuntimeException("Cycle in templates involving $file: ${ctx.resolving}")
 
         val rendered = Template.parse(this.rawCode).render(HashMap(ctx.properties)) // Library requires mutable maps..
-        val code = if (!isHtml) rendered else {
+        val code = if (!(isHtml || hasHtmlContent)) rendered else {
             val parser: Parser = Parser.builder().build()
             HtmlRenderer.builder(ctx.markdownOptions).build().render(parser.parse(rendered))
         }
         val resources = listSetting("extraCSS") + listSetting("extraJS")
         return layout()?.let {
             val layoutTemplate = ctx.layouts[it] ?: throw RuntimeException("No layouts named $it in ${ctx.layouts}")
-            layoutTemplate.resolveInner(ctx.nest(code, file.absolutePath, resources))
+            layoutTemplate.resolveInner(ctx.nest(code, file.absolutePath, resources), hasHtmlContent = isHtml)
         } ?: ResolvedPage(code, isHtml, resources + ctx.resources)
     }
 }
