@@ -12,7 +12,7 @@ The layout must be defined under `<root>/_layouts` directory.
 It must contain the `{{ content }}` label indicates the place where the content will be rendered here.
 
 _basic_layout.md_
-```
+```md
 # Hello World!
 {{ content }}
 ```
@@ -22,7 +22,7 @@ To use a layout one must declare it within the config section of the file
 (the config section is the section between the pair of `---`).
 
 _page.md_
-```
+```md
 ---
 layout: basic_layout
 ---
@@ -32,7 +32,7 @@ Year 2020
 #### The result
 Given the layout and the page from above the following page will be created:
 
-```
+```md
 # Hello World!
 Year 2020
 ```

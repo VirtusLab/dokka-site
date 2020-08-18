@@ -103,8 +103,10 @@ fun loadTemplateFile(file: File): TemplateFile {
     val lines = file.readLines()
 
     val (config, content) = if (lines.firstOrNull() == ConfigSeparator) {
-        val index = lines.lastIndexOf(ConfigSeparator)
-        Pair(lines.take(index + 1), lines.drop(index + 1))
+        // Taking the second occurrence of ConfigSeparator.
+        // The rest may appear within the content.
+        val index = lines.drop(1).indexOf(ConfigSeparator) + 2
+        Pair(lines.take(index), lines.drop(index))
     } else Pair(emptyList(), lines)
 
     val configParsed = yamlParser.parse(config.joinToString(LineSeparator))
