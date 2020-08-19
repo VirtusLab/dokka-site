@@ -59,6 +59,14 @@ data class ResolvedPage(
 
 val EmptyResolvedPage = ResolvedPage(code = "")
 
+/**
+ * Data class for the template files.
+ * Template file is a file `.md` or `.html` handling settings.
+ *
+ * @param file The Actual file defining the template.
+ * @param rawCode The content, what is to be shown, everything but settings.
+ * @param settings The config defined in the begging of the file, between the pair of `---` (e.g. layout: basic).
+ */
 data class TemplateFile(val file: File, val rawCode: String, private val settings: Map<String, List<String>>) {
     private fun stringSetting(name: String): String? {
         val list = settings.get(name)
