@@ -50,22 +50,30 @@ abstract class BaseStaticSiteProcessor(cxt: DokkaContext) : PageTransformer {
         return DRI("_.$relativePath")
     }
 
-    inner class DocPageNode(
-        private val from: File,
-        private val template: TemplateFile?,
-        override val children: List<DocPageNode>,
-        override val content: ContentNode,
-        val resolved: ResolvedPage,
+    abstract inner class BasePageNode(
+        private val template: TemplateFile,
+        override val children: List<BasePageNode>,
+        open val resolved: ResolvedPage,
         override val dri: Set<DRI>,
         override val embeddedResources: List<String> = emptyList()
     ) : ContentPage {
-        override val name: String = template?.name() ?: from.name
-
-        val isIndexPage = from.name == "index.md" || from.name == "index.html"
-
-        fun title() = template?.title() ?: name
-
+        override val name: String = template.name()
         override val documentable: Documentable? = null
+
+        val isIndexPage = template.file.name == "index"
+
+        fun title() = template.title()
+    }
+
+    inner class HtmlPageNode(
+        private val template: TemplateFile,
+        override val children: List<BasePageNode>,
+        override val resolved: ResolvedPage,
+        override val dri: Set<DRI>,
+        override val embeddedResources: List<String> = emptyList()
+    ) : BasePageNode(template, children, resolved, dri, embeddedResources) {
+
+        override val content: ContentNode = PreRenderedContent(resolved.code, DCI(dri, ContentKind.Empty), mySourceSet)
 
         override fun modified(
             name: String,
@@ -74,10 +82,66 @@ abstract class BaseStaticSiteProcessor(cxt: DokkaContext) : PageTransformer {
             embeddedResources: List<String>,
             children: List<PageNode>
         ): ContentPage =
-            DocPageNode(from, template, children.filterIsInstance<DocPageNode>(), content, resolved, dri, embeddedResources)
+            HtmlPageNode(template, children.filterIsInstance<BasePageNode>(), resolved, dri, embeddedResources)
 
         override fun modified(name: String, children: List<PageNode>): PageNode =
-            DocPageNode(from, template, children.filterIsInstance<DocPageNode>(), content, resolved, dri, embeddedResources)
+            HtmlPageNode(template, children.filterIsInstance<BasePageNode>(), resolved, dri, embeddedResources)
+    }
+
+    inner class MdPageNode(
+        private val template: TemplateFile,
+        override val children: List<BasePageNode>,
+        override val resolved: ResolvedPage,
+        override val dri: Set<DRI>,
+        override val embeddedResources: List<String> = emptyList()
+    ) : BasePageNode(template, children, resolved, dri, embeddedResources) {
+
+        override val content: ContentNode = resolvedPageToContent(resolved, dri)
+
+        override fun modified(
+            name: String,
+            content: ContentNode,
+            dri: Set<DRI>,
+            embeddedResources: List<String>,
+            children: List<PageNode>
+        ): ContentPage =
+            MdPageNode(template, children.filterIsInstance<BasePageNode>(), resolved, dri, embeddedResources)
+
+        override fun modified(name: String, children: List<PageNode>): PageNode =
+            MdPageNode(template, children.filterIsInstance<BasePageNode>(), resolved, dri, embeddedResources)
+
+        private fun resolvedPageToContent(
+            resolvedPage: ResolvedPage,
+            dri: Set<DRI>
+        ): ContentGroup {
+            val parser =
+                if (resolvedPage.isHtml) HtmlParser()
+                else MarkdownParser(logger = DokkaConsoleLogger)
+
+            val docTag = try {
+                parser.parseStringToDocNode(resolvedPage.code)
+            } catch (e: Throwable) {
+                val msg = "Error rendering (dri = $dri): ${e.message}"
+                println("ERROR: $msg") // TODO (#14): provide proper error handling
+                Text(msg, emptyList())
+            }
+
+            val contentNodes = DocTagToContentConverter.buildContent(
+                docTag,
+                DCI(dri, ContentKind.Empty),
+                mySourceSet,
+                emptySet(),
+                PropertyContainer.empty()
+            )
+
+            return ContentGroup(
+                contentNodes,
+                DCI(dri, ContentKind.Empty),
+                mySourceSet,
+                emptySet(),
+                PropertyContainer.empty()
+            )
+        }
     }
 }
 
@@ -85,7 +149,7 @@ class SiteResourceManager(cxt: DokkaContext) : BaseStaticSiteProcessor(cxt) {
     private fun listResources(nodes: List<PageNode>): Set<String> =
         nodes.flatMap {
             when (it) {
-                is DocPageNode -> listResources(it.children) + it.resolved.resources
+                is BasePageNode -> listResources(it.children) + it.resolved.resources
                 else -> emptySet()
             }
         }.toSet()
@@ -100,7 +164,7 @@ class SiteResourceManager(cxt: DokkaContext) : BaseStaticSiteProcessor(cxt) {
         }
         val modified = input.transformContentPagesTree {
             when (it) {
-                is DocPageNode -> it.modified(embeddedResources = it.embeddedResources + it.resolved.resources)
+                is BasePageNode -> it.modified(embeddedResources = it.embeddedResources + it.resolved.resources)
                 else -> it
             }
         }
@@ -117,7 +181,7 @@ class SitePagesCreator(cxt: DokkaContext) : BaseStaticSiteProcessor(cxt) {
         val (indexes, children) = loadFiles().partition { it.isIndexPage }
         if (indexes.size > 1) println("ERROR: Multiple index pages found ${children.filter { it.isIndexPage }}") // TODO (#14): provide proper error handling
 
-        fun toNavigationNode(c: DocPageNode): NavigationNode =
+        fun toNavigationNode(c: BasePageNode): NavigationNode =
             NavigationNode(
                 c.title(),
                 c.dri.first(),
@@ -177,7 +241,7 @@ class SitePagesCreator(cxt: DokkaContext) : BaseStaticSiteProcessor(cxt) {
         dirs.map { loadTemplateFile(it) }.map { it.name() to it }.toMap()
     }
 
-    private fun renderDocs(from: File, noChildren: Boolean = false): DocPageNode? =
+    private fun renderDocs(from: File, noChildren: Boolean = false): BasePageNode? =
         if (from.name.startsWith("_")) null else try {
             val dri = setOf(from.asDri())
 
@@ -209,35 +273,18 @@ class SitePagesCreator(cxt: DokkaContext) : BaseStaticSiteProcessor(cxt) {
                 ResolvedPage(msg)
             }
 
-            val parser =
-                if (resolvedPage.isHtml) HtmlParser()
-                else MarkdownParser(logger = DokkaConsoleLogger)
-
-            val docTag = try {
-                parser.parseStringToDocNode(resolvedPage.code)
-            } catch (e: Throwable) {
-                val msg = "Error rendering $from: ${e.message}"
-                println("ERROR: $msg") // TODO (#14): provide proper error handling
-                Text(msg, emptyList())
+            if (resolvedPage.isHtml) {
+                HtmlPageNode(templateFile, children.filter { !it.isIndexPage }, resolvedPage, dri)
+            } else { // isMd
+                MdPageNode(templateFile, children.filter { !it.isIndexPage }, resolvedPage, dri)
             }
 
-            val contentNodes = DocTagToContentConverter.buildContent(
-                docTag,
-                DCI(dri, ContentKind.Empty),
-                mySourceSet,
-                emptySet(),
-                PropertyContainer.empty()
-            )
-
-            val contentGroup = ContentGroup(contentNodes, DCI(dri, ContentKind.Empty), mySourceSet, emptySet(), PropertyContainer.empty())
-
-            DocPageNode(from, templateFile, children.filter { !it.isIndexPage }, contentGroup, resolvedPage, dri)
         } catch (e: RuntimeException) {
             e.printStackTrace() // TODO (#14): provide proper error handling
             null
         }
 
-    private fun loadFiles(): List<DocPageNode> =
+    private fun loadFiles(): List<BasePageNode> =
         docsFile.listFiles()?.mapNotNull { renderDocs(it) } ?: emptyList()
 
 }

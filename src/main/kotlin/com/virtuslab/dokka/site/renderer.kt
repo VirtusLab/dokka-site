@@ -24,7 +24,7 @@ class ExternalDocsToolRenderer(context: DokkaContext) : org.jetbrains.dokka.base
     // TODO (#15): change API of HTML renderer
     override fun buildHtml(page: PageNode, resources: List<String>, content: FlowContent.() -> Unit) =
         when (page) {
-            is BaseStaticSiteProcessor.DocPageNode ->
+            is BaseStaticSiteProcessor.BasePageNode ->
                 if (!page.dri.contains(docsRootDRI)) super.buildHtml(page, resources, content)
                 else createHTML().html {
                     head {
