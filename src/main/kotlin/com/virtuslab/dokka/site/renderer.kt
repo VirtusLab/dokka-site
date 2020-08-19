@@ -13,7 +13,7 @@ class ExternalDocsToolRenderer(context: DokkaContext) : org.jetbrains.dokka.base
         fun FlowContent.render(txt: String) = div { unsafe { +txt } }
         when (val content = page.content) {
             is PreRenderedContent -> context.render(content.html)
-            else -> page.content.build(context, page)
+            else -> content.build(context, page)
         }
     }
 

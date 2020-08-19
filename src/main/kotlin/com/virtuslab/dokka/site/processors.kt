@@ -195,10 +195,12 @@ class SitePagesCreator(cxt: DokkaContext) : BaseStaticSiteProcessor(cxt) {
             )
 
             val resolvedPage = try {
-                val context = RenderingContext(mapOf("content" to templateFile.rawCode), layouts)
                 if (from.isDirectory) {
                     children.find { it.isIndexPage }?.resolved ?: EmptyResolvedPage
                 } else {
+                    val properties = templateFile.layout()
+                        ?.let { mapOf("content" to templateFile.rawCode) } ?: emptyMap()
+                    val context = RenderingContext(properties, layouts)
                     templateFile.resolve(context)
                 }
             } catch (e: Throwable) {

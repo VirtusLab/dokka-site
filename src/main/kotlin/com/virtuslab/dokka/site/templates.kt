@@ -71,7 +71,7 @@ data class TemplateFile(val file: File, val rawCode: String, private val setting
     private val isHtml = file.name.endsWith(".html")
     fun name(): String = stringSetting("name") ?: file.name.removeSuffix(if (isHtml) ".html" else ".md")
     fun title(): String = stringSetting("title") ?: name()
-    private fun layout(): String? = stringSetting("layout")
+    fun layout(): String? = stringSetting("layout")
 
 
     fun resolve(ctx: RenderingContext): ResolvedPage =
