@@ -51,6 +51,7 @@ abstract class BaseStaticSiteProcessor(cxt: DokkaContext) : PageTransformer {
     }
 
     abstract inner class BasePageNode(
+        file: File,
         private val template: TemplateFile,
         override val children: List<BasePageNode>,
         open val resolved: ResolvedPage,
@@ -60,18 +61,19 @@ abstract class BaseStaticSiteProcessor(cxt: DokkaContext) : PageTransformer {
         override val name: String = template.name()
         override val documentable: Documentable? = null
 
-        val isIndexPage = template.file.name == "index"
+        val isIndexPage = file.name == "index.md" || file.name == "index.html"
 
         fun title() = template.title()
     }
 
     inner class HtmlPageNode(
+        private val file: File,
         private val template: TemplateFile,
         override val children: List<BasePageNode>,
         override val resolved: ResolvedPage,
         override val dri: Set<DRI>,
         override val embeddedResources: List<String> = emptyList()
-    ) : BasePageNode(template, children, resolved, dri, embeddedResources) {
+    ) : BasePageNode(file, template, children, resolved, dri, embeddedResources) {
 
         override val content: ContentNode = PreRenderedContent(resolved.code, DCI(dri, ContentKind.Empty), mySourceSet)
 
@@ -82,19 +84,20 @@ abstract class BaseStaticSiteProcessor(cxt: DokkaContext) : PageTransformer {
             embeddedResources: List<String>,
             children: List<PageNode>
         ): ContentPage =
-            HtmlPageNode(template, children.filterIsInstance<BasePageNode>(), resolved, dri, embeddedResources)
+            HtmlPageNode(file, template, children.filterIsInstance<BasePageNode>(), resolved, dri, embeddedResources)
 
         override fun modified(name: String, children: List<PageNode>): PageNode =
-            HtmlPageNode(template, children.filterIsInstance<BasePageNode>(), resolved, dri, embeddedResources)
+            HtmlPageNode(file, template, children.filterIsInstance<BasePageNode>(), resolved, dri, embeddedResources)
     }
 
     inner class MdPageNode(
+        private val file: File,
         private val template: TemplateFile,
         override val children: List<BasePageNode>,
         override val resolved: ResolvedPage,
         override val dri: Set<DRI>,
         override val embeddedResources: List<String> = emptyList()
-    ) : BasePageNode(template, children, resolved, dri, embeddedResources) {
+    ) : BasePageNode(file, template, children, resolved, dri, embeddedResources) {
 
         override val content: ContentNode = resolvedPageToContent(resolved, dri)
 
@@ -105,10 +108,10 @@ abstract class BaseStaticSiteProcessor(cxt: DokkaContext) : PageTransformer {
             embeddedResources: List<String>,
             children: List<PageNode>
         ): ContentPage =
-            MdPageNode(template, children.filterIsInstance<BasePageNode>(), resolved, dri, embeddedResources)
+            MdPageNode(file, template, children.filterIsInstance<BasePageNode>(), resolved, dri, embeddedResources)
 
         override fun modified(name: String, children: List<PageNode>): PageNode =
-            MdPageNode(template, children.filterIsInstance<BasePageNode>(), resolved, dri, embeddedResources)
+            MdPageNode(file, template, children.filterIsInstance<BasePageNode>(), resolved, dri, embeddedResources)
 
         private fun resolvedPageToContent(
             resolvedPage: ResolvedPage,
@@ -274,9 +277,9 @@ class SitePagesCreator(cxt: DokkaContext) : BaseStaticSiteProcessor(cxt) {
             }
 
             if (resolvedPage.isHtml) {
-                HtmlPageNode(templateFile, children.filter { !it.isIndexPage }, resolvedPage, dri)
+                HtmlPageNode(from, templateFile, children.filter { !it.isIndexPage }, resolvedPage, dri)
             } else { // isMd
-                MdPageNode(templateFile, children.filter { !it.isIndexPage }, resolvedPage, dri)
+                MdPageNode(from, templateFile, children.filter { !it.isIndexPage }, resolvedPage, dri)
             }
 
         } catch (e: RuntimeException) {
