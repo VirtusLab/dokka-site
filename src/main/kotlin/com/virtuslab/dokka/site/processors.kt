@@ -157,7 +157,6 @@ class SiteResourceManager(cxt: DokkaContext) : BaseStaticSiteProcessor(cxt) {
             }
         }.toSet()
 
-
     override fun transform(input: RootPageNode): RootPageNode {
         val images = File(root, "images").walkTopDown().filter { it.isFile }
             .map { root.toPath().relativize(it.toPath()).toString() }
