@@ -31,8 +31,8 @@ class ExternalDocsToolRenderer(context: DokkaContext) : org.jetbrains.dokka.base
             is BaseStaticSiteProcessor.MdPageNode ->
                 if (page.dri.contains(docsRootDRI)) {
                     val parser: Parser = Parser.builder().build()
-                    val htmlContent =
-                        HtmlRenderer.builder(defaultMarkdownOptions).build().render(parser.parse(page.resolved.code))
+                    val htmlRenderer = HtmlRenderer.builder(defaultMarkdownOptions).build()
+                    val htmlContent = htmlRenderer.render(parser.parse(page.resolved.code))
                     createHtml(page, htmlContent)
                 } else super.buildHtml(page, resources, content)
             else ->

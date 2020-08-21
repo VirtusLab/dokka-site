@@ -1,8 +1,10 @@
+---
+layout: vl_header
+---
+
 # Dokka site
 
 **Generate a static documentation for in your dokka project**
-
-
 
 **Yes, this page was generated using dokka-site**
 
