@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "com.virtuslab.dokka"
-version = "0.1.0"
+version = "0.1.1"
 
 tasks.withType(KotlinCompile::class).all {
     val language_version: String by project
