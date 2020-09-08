@@ -15,7 +15,7 @@ import com.vladsch.flexmark.util.options.DataHolder
 import com.vladsch.flexmark.util.options.MutableDataSet
 import liqp.Template
 import java.io.File
-import java.util.HashMap
+import java.util.*
 
 val defaultMarkdownOptions: DataHolder =
     MutableDataSet()
@@ -43,21 +43,39 @@ data class RenderingContext(
     val markdownOptions: DataHolder = defaultMarkdownOptions,
     val resources: List<String> = emptyList()
 ) {
-    internal fun nest(code: String, path: String, resources: List<String>) =
+    internal fun nest(code: String, file: File, resources: List<String>) =
         copy(
-            resolving = resolving + path,
+            resolving = resolving + file.absolutePath,
             properties = properties + ("content" to code),
             resources = this.resources + resources
         )
 }
 
-data class ResolvedPage(
-    val code: String,
-    val isHtml: Boolean = true,
-    val resources: List<String> = emptyList()
+data class LayoutInfo(
+    val htmlTemple: TemplateFile,
+    val ctx: RenderingContext,
 )
 
-val EmptyResolvedPage = ResolvedPage(code = "")
+data class PreResolvedPage(
+    val code: String,
+    val nextLayoutInfo: LayoutInfo?,
+    val hasMarkdown: Boolean,
+    val resources: List<String> = emptyList()
+) {
+    fun render(renderedMarkdown: String): ResolvedPage =
+        if (nextLayoutInfo == null) ResolvedPage(renderedMarkdown, hasMarkdown, resources) else {
+            val newCtx =
+                nextLayoutInfo.ctx.copy(properties = nextLayoutInfo.ctx.properties + ("content" to renderedMarkdown))
+            val res = nextLayoutInfo.htmlTemple.resolveToHtml(newCtx, hasMarkdown)
+            ResolvedPage(res.code, hasMarkdown, res.resources)
+        }
+}
+
+data class ResolvedPage(
+    val code: String,
+    val hasMarkdown: Boolean,
+    val resources: List<String> = emptyList()
+)
 
 /**
  * Data class for the template files.
@@ -67,46 +85,65 @@ val EmptyResolvedPage = ResolvedPage(code = "")
  * @param rawCode The content, what is to be shown, everything but settings.
  * @param settings The config defined in the begging of the file, between the pair of `---` (e.g. layout: basic).
  */
-data class TemplateFile(val file: File, val rawCode: String, private val settings: Map<String, List<String>>) {
+data class TemplateFile(
+    val file: File,
+    val isHtml: Boolean,
+    val rawCode: String,
+    private val settings: Map<String, List<String>>
+) {
     private fun stringSetting(name: String): String? {
-        val list = settings.get(name)
+        val list = settings[name]
         list?.also { assert(it.size == 1) { "Setting $name is a list in $settings" } }
         return list?.first()?.removePrefix("\"")?.removeSuffix("\"")
     }
 
-    private fun listSetting(name: String): List<String> = settings.get(name) ?: emptyList()
+    private fun listSetting(name: String): List<String> = settings[name] ?: emptyList()
 
-    private val isHtml = file.name.endsWith(".html")
     fun name(): String = stringSetting("name") ?: file.name.removeSuffix(if (isHtml) ".html" else ".md")
     fun title(): String = stringSetting("title") ?: name()
     fun layout(): String? = stringSetting("layout")
+    fun hasFrame(): Boolean = stringSetting("hasFrame") != "false"
 
-    fun resolve(ctx: RenderingContext): ResolvedPage =
+
+    fun resolveMarkdown(ctx: RenderingContext): PreResolvedPage =
         resolveInner(
             ctx = ctx.copy(properties = HashMap(ctx.properties) + ("page" to mapOf("title" to title()))),
-            hasHtmlContent = false
+            stopAtHtml = true,
+            !isHtml // This is toplevel template
         )
 
-    private fun resolveInner(ctx: RenderingContext, hasHtmlContent: Boolean): ResolvedPage {
+    fun resolveToHtml(ctx: RenderingContext, hasMarkdown: Boolean): PreResolvedPage =
+        resolveInner(ctx, stopAtHtml = false, hasMarkdown)
+
+    private fun resolveInner(ctx: RenderingContext, stopAtHtml: Boolean, hasMarkdown: Boolean): PreResolvedPage {
         if (ctx.resolving.contains(file.absolutePath))
             throw java.lang.RuntimeException("Cycle in templates involving $file: ${ctx.resolving}")
 
-        val rendered = Template.parse(this.rawCode).render(HashMap(ctx.properties)) // Library requires mutable maps..
-        val toBeResolvedIsHtml = isHtml || hasHtmlContent
-        val code = if (!toBeResolvedIsHtml) rendered else {
-            val parser: Parser = Parser.builder().build()
-            HtmlRenderer.builder(ctx.markdownOptions).build().render(parser.parse(rendered))
-        }
-        val resources = listSetting("extraCSS") + listSetting("extraJS")
-        return layout()?.let {
-            val layoutTemplate = ctx.layouts[it] ?: throw RuntimeException("No layouts named $it in ${ctx.layouts}")
-            layoutTemplate.resolveInner(
-                ctx = ctx.nest(code, file.absolutePath, resources),
-                hasHtmlContent = toBeResolvedIsHtml
+        val layoutTemplate =
+            layout()?.let { ctx.layouts[it] ?: throw RuntimeException("No layouts named $it in ${ctx.layouts}") }
+
+        if (!stopAtHtml && !isHtml)
+            throw java.lang.RuntimeException(
+                "Markdown layout cannot be applied after .html. Rendering $file after: ${ctx.resolving}"
             )
-        } ?: ResolvedPage(code, toBeResolvedIsHtml, resources + ctx.resources)
+
+        return if (stopAtHtml && isHtml) {
+            PreResolvedPage(ctx.properties["content"].toString(), LayoutInfo(this, ctx), hasMarkdown)
+        } else {
+            val rendered =
+                Template.parse(this.rawCode).render(HashMap(ctx.properties)) // Library requires mutable maps..
+            val code = if (!isHtml) rendered else {
+                val parser: Parser = Parser.builder().build()
+                HtmlRenderer.builder(ctx.markdownOptions).build().render(parser.parse(rendered))
+            }
+            val resources = listSetting("extraCSS") + listSetting("extraJS")
+            val resolved = layoutTemplate?.resolveInner(ctx.nest(code, file, resources), stopAtHtml, hasMarkdown)
+            resolved ?: PreResolvedPage(code, null, hasMarkdown, resources + ctx.resources)
+        }
     }
 }
+
+fun emptyTemplate(file: File) = TemplateFile(file, isHtml = true, "", emptyMap())
 
 const val ConfigSeparator = "---"
 const val LineSeparator = "\n"
@@ -129,6 +166,7 @@ fun loadTemplateFile(file: File): TemplateFile {
 
     return TemplateFile(
         file = file,
+        file.name.endsWith(".html"),
         rawCode = content.joinToString(LineSeparator),
         settings = yamlCollector.data
     )

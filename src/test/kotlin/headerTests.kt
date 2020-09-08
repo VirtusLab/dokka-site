@@ -1,7 +1,9 @@
 package com.virtuslab.dokka.site
 
+import com.vladsch.flexmark.html.HtmlRenderer
+import com.vladsch.flexmark.parser.Parser
+import org.junit.Assert.assertEquals
 import org.junit.Test
-import org.junit.Assert.*
 import java.nio.file.Files
 
 class TemplateFileTests {
@@ -34,6 +36,13 @@ class TemplateFileTests {
     }
 
 
+    private fun TemplateFile.fullRender(ctx: RenderingContext): String {
+        val code = resolveMarkdown(ctx)
+        val parser: Parser = Parser.builder().build()
+        val built = HtmlRenderer.builder(ctx.markdownOptions).build().render(parser.parse(code.code))
+        return code.render(built).code.trim()
+    }
+
     @Test
     fun testParsingHeaders() {
         testTemplate(
@@ -48,6 +57,44 @@ class TemplateFileTests {
             assertEquals(title(), "myTitle")
         }
     }
+
+    @Test
+    fun testLinks() {
+        val base =
+            """
+            ---
+            title: myTitle
+            name: base
+            ---
+            Ala {{ content }}. {{p2}} with [link](link/target.md)!
+            """.trimIndent()
+
+        val content =
+            """
+                ---
+                layout: base
+                name: content
+                ---
+                ma kota w **{{ p1 }}** from [here](link/here.md)
+                """.trimIndent()
+
+
+        val expected = """
+             <p>Ala <p>ma kota w <strong>paski</strong> from <a href="link/here.md">here</a></p>
+             . Hej with <a href="link/target.md">link</a>!</p>
+            """.trimIndent()
+
+        testTemplates(
+            mapOf("p1" to "paski", "p2" to "Hej"),
+            listOf(base to "html", content to "md")
+        ) {
+            assertEquals(
+                expected,
+                it.layouts.getValue("content").fullRender(it)
+            )
+        }
+    }
+
 
     @Test
     fun layout() {
@@ -69,13 +116,19 @@ class TemplateFileTests {
                 ma kota w **{{ p1 }}**
                 """.trimIndent()
 
+
+        val expected = """
+                <p>Ala <p>ma kota w <strong>paski</strong></p>
+                . Hej!</p>
+            """.trimIndent()
+
         testTemplates(
             mapOf("p1" to "paski", "p2" to "Hej"),
             listOf(base to "html", content to "md")
         ) {
             assertEquals(
-                "<p>Ala ma kota w <strong>paski</strong>. Hej!</p>",
-                it.layouts.getValue("content").resolve(it).code.trim()
+                expected,
+                it.layouts.getValue("content").fullRender(it)
             )
         }
     }
@@ -126,12 +179,12 @@ class TemplateFileTests {
             listOf(
                 toplevel to "html",
                 basePage to "md",
-                content to "html"
+                content to "md"
             )
         ) {
             assertEquals(
                 expected,
-                it.layouts.getValue("content").resolve(it).code.trim()
+                it.layouts.getValue("content").fullRender(it)
             )
         }
     }
@@ -143,7 +196,7 @@ class TemplateFileTests {
             ---
             name: toplevel
             ---
-            # The Page
+            <h1>The Page</h1>
             {{ content }}
             """.trimIndent()
 
@@ -181,14 +234,14 @@ class TemplateFileTests {
         testTemplates(
             mapOf("pageName" to "Test page", "name" to "world!"),
             listOf(
-                toplevel to "md",
+                toplevel to "html",
                 basePage to "html",
                 content to "md"
             )
         ) {
             assertEquals(
                 expected,
-                it.layouts.getValue("content").resolve(it).code.trim()
+                it.layouts.getValue("content").fullRender(it)
             )
         }
     }
@@ -201,7 +254,7 @@ class TemplateFileTests {
             """.trimIndent(),
             ext = "md"
         ) {
-            assertEquals("# Hello there!", resolve(RenderingContext(mapOf("msg" to "there"))).code.trim())
+            assertEquals("# Hello there!", resolveMarkdown(RenderingContext(mapOf("msg" to "there"))).code.trim())
         }
     }
 
@@ -213,7 +266,7 @@ class TemplateFileTests {
             """.trimIndent(),
             ext = "md"
         ) {
-            assertEquals("# Hello there!", resolve(RenderingContext(mapOf("msg" to "there"))).code.trim())
+            assertEquals("# Hello there!", resolveMarkdown(RenderingContext(mapOf("msg" to "there"))).code.trim())
         }
     }
 }

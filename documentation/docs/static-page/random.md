@@ -1,6 +1,6 @@
 ---
 layout: vl_header
-title: Sample html page
+title: Sample md page
 ---
 
 Hello world!
