@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "com.virtuslab.dokka"
-version = "0.1.1"
+version = "0.1.3-SNAPSHOT"
 
 tasks.withType(KotlinCompile::class).all {
     val language_version: String by project
@@ -34,11 +34,12 @@ dependencies {
     implementation("org.jetbrains.dokka:dokka-base:$dokka_version")
     implementation("com.vladsch.flexmark:flexmark-all:0.42.12")
     implementation("nl.big-o:liqp:0.6.7")
-    implementation("org.jetbrains.kotlinx:kotlinx-html-jvm:0.6.10")
+    implementation("org.jetbrains.kotlinx:kotlinx-html-jvm:0.7.2")
 
     implementation("junit:junit:4.13")
 
     dokkaHtmlPlugin(project(":"))
+    testImplementation("org.jetbrains.dokka:dokka-core:$dokka_version")
 }
 
 // Gradle metadata
@@ -83,5 +84,5 @@ publishing {
 
 // Configure dokka
 tasks.dokkaHtml {
-    pluginsConfiguration += "ExternalDocsTooKey" to "documentation"
+    pluginsConfiguration.put("ExternalDocsTooKey",  "documentation")
 }

@@ -8,7 +8,7 @@ layout: vl_header
 
 **Yes, this page was generated using dokka-site**
 
-You can learn more from out [documentation](dokka-site/index.html).
+You can learn more from our [documentation](dokka-site/index.html).
 
 ## Getting started
 
