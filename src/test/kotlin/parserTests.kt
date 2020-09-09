@@ -7,7 +7,7 @@ import org.junit.Test
 
 
 class ParserTest {
-    private fun runtest(md: String, expected: DocTag) {
+    private fun runTest(md: String, expected: DocTag) {
         val parser = ExtendableMarkdownParser(md) { null }
         val compiled = parser.parse()
         assertEquals(expected, compiled)
@@ -15,10 +15,10 @@ class ParserTest {
 
 
     @Test
-    fun simpleTest() = runtest("ala", P(listOf(Text("ala"))))
+    fun simpleTest() = runTest("ala", P(listOf(Text("ala"))))
 
     @Test
-    fun code() = runtest(
+    fun code() = runTest(
         """
             ```scala
             def ala() = 123
@@ -28,7 +28,7 @@ class ParserTest {
     )
 
     @Test
-    fun relativeLink() = runtest(
+    fun relativeLink() = runTest(
         """
             [link](ala/maKota.md)
         """.trimIndent(),
@@ -36,7 +36,7 @@ class ParserTest {
     )
 
     @Test
-    fun listTest() = runtest(
+    fun listTest() = runTest(
         """
         List:
 

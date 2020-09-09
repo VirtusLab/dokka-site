@@ -58,16 +58,17 @@ tasks.whenTaskAdded {
     }
 }
 
+val bintrayUser: String? by project
 val bintrayKey: String? by project
 
 bintray {
-    user = "kromanowski"
+    user = project.findProperty("bintray_user") as String? ?: bintrayUser
     key = project.findProperty("bintray_api_key") as String? ?: bintrayKey
     setPublications("MavenJava")
     publish = true
     pkg(delegateClosureOf<com.jfrog.bintray.gradle.BintrayExtension.PackageConfig> {
-        repo = "releases"
-        userOrg = "romanowski"
+        repo = "dokka"
+        userOrg = "virtuslab"
         name = project.name
         setLicenses("Apache-2.0")
         vcsUrl = "https://github.com/VirtusLab/dokka-site.git"
@@ -84,5 +85,5 @@ publishing {
 
 // Configure dokka
 tasks.dokkaHtml {
-    pluginsConfiguration.put("ExternalDocsTooKey",  "documentation")
+    pluginsConfiguration.put("ExternalDocsTooKey", "documentation")
 }

@@ -21,9 +21,9 @@ import java.net.URL
 
 
 // TODO (#24): This is a code taken from dokka, will be removed after PR with fixes is merged into dokka
-// The dokka logic was pulled to `externalDir` callback and `linksHandler` was simplyfied
+// The dokka logic was pulled to `externalDir` callback and `linksHandler` was simplified
 // Bug in imagesHandler was fixed (NullPointer)
-open class ExtendableMarkdownParser(private val text: String, private val externalDir: (String) -> DRI?) {
+open class ExtendableMarkdownParser(private val text: String, private val externalDri: (String) -> DRI?) {
 
     fun parse(): DocTag {
         val flavourDescriptor = GFMFlavourDescriptor()
@@ -117,7 +117,7 @@ open class ExtendableMarkdownParser(private val text: String, private val extern
                     URL(link)
                     null
                 } catch (e: MalformedURLException) {
-                    externalDir(link)
+                    externalDri(link)
                 }
             }
 
