@@ -61,13 +61,13 @@ tasks.whenTaskAdded {
 val bintrayKey: String? by project
 
 bintray {
-    user = "kromanowski"
+    user = "mkondratek"
     key = project.findProperty("bintray_api_key") as String? ?: bintrayKey
     setPublications("MavenJava")
     publish = true
     pkg(delegateClosureOf<com.jfrog.bintray.gradle.BintrayExtension.PackageConfig> {
-        repo = "releases"
-        userOrg = "romanowski"
+        repo = "dokka"
+        userOrg = "virtuslab"
         name = project.name
         setLicenses("Apache-2.0")
         vcsUrl = "https://github.com/VirtusLab/dokka-site.git"
