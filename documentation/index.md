@@ -16,7 +16,7 @@ To install our plugin in your project add following to your `build.html` (to gen
 
 ```
 dependencies {
-    dokkaHtmlPlugin("com.virtuslab.dokka:dokka-site:0.1.0")
+    dokkaHtmlPlugin("com.virtuslab.dokka:dokka-site:0.1.3")
 }
 
 tasks.dokkaHtml {
