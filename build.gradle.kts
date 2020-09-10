@@ -1,4 +1,9 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+import java.io.BufferedInputStream
+import java.io.BufferedReader
+import java.io.ByteArrayOutputStream
+import java.io.InputStreamReader
+import kotlin.collections.toByteArray
 
 plugins {
     kotlin("jvm")
@@ -9,7 +14,29 @@ plugins {
 }
 
 group = "com.virtuslab.dokka"
-version = "0.1.3"
+
+
+fun String.run(): String? {
+    val proc = Runtime.getRuntime()?.exec(this)
+    if (proc?.waitFor() != 0) return null
+    val os = proc.inputStream
+    return os.let {
+        val line = BufferedReader(InputStreamReader(it)).readLines().joinToString("\n")
+        os.close()
+        return line.trim()
+    }
+}
+
+fun getVersion(): String {
+    val base = "git describe --tags --exact-match".run() ?: "git describe --tags".run() ?: "0.1.0-SNAPSHOT"
+
+    val statusStr = "git status --porcelain".run()?.let { if (it.trim().length > 2) "-SNAPSHOT" else "" } ?: "-SNAPSHOT"
+    val v = base + statusStr
+    println("Using $v version.")
+    return v
+}
+
+version = getVersion()
 
 tasks.withType(KotlinCompile::class).all {
     val language_version: String by project
