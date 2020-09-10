@@ -2,24 +2,44 @@
   <head>
     <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
     <title>index</title>
+    <link href="styles/style.css" rel="Stylesheet">
+    <script type="text/javascript" src="scripts/navigationLoader.js" async="async"></script>
+    <script type="text/javascript" src="scripts/platformContentHandler.js" async="async"></script>
+    <script type="text/javascript" src="scripts/sourceset_dependencies.js" async="async"></script>
+    <script type="text/javascript" src="scripts/clipboard.js" async="async"></script>
+    <link href="styles/jetbrains-mono.css" rel="Stylesheet">
     <script>var pathToRoot = "";</script>
   </head>
-  <body><p>Powered by <a href="https://www.virtuslab.com/">VirtusLab</a></p>
-<hr />
-<h1>Dokka site</h1>
-<p><strong>Generate a static documentation for in your dokka project</strong></p>
-<p><strong>Yes, this page was generated using dokka-site</strong></p>
-<p>You can learn more from out <a href="dokka-site/index.html">documentation</a>.</p>
-<h2>Getting started</h2>
-<p>To install our plugin in your project add following to your <code>build.html</code> (to generate documentation from <code>documentation</code> directory)</p>
-<pre><code>dependencies {
-    dokkaHtmlPlugin(&quot;com.virtuslab.dokka:dokka-site:0.1.0&quot;)
-}
+  <body>
+    <div id="container">
+      <div id="leftColumn">
+        <div id="logo"></div>
+        <div id="paneSearch"></div>
+        <div id="sideMenu"></div>
+      </div>
+      <div id="main">
+        <div id="searchBar"></div>
+        <script type="text/javascript" src="scripts/pages.js"></script>
+        <script type="text/javascript" src="scripts/main.js"></script>
+        <div id="content" pageIds="////PointingToDeclaration/_top_level_index">
+          <div class="breadcrumbs"><a href="index.html">index</a></div>
+          <div><div>
+  <p class="paragraph">
+    <p class="paragraph">Powered by <a href="https://www.virtuslab.com/">VirtusLab</a></p>
 
-tasks.dokkaHtml {
-    (pluginsConfiguration as MutableMap&lt;String, String&gt;) += &quot;ExternalDocsTooKey&quot; to &quot;documentation&quot;
-}
-</code></pre>
-</body>
+    <h1 class=""><a></a> Dokka site</h1>
+    <p class="paragraph">Generate a static documentation for in your dokka project</p>
+    <p class="paragraph">Yes, this page was generated using dokka-site</p>
+    <p class="paragraph">You can learn more from our <a href="dokka-site/index.html">documentation</a>.</p>
+    <h2 class=""><a></a> Getting started</h2>
+    <p class="paragraph">To install our plugin in your project add following to your <code>build.html</code> (to generate documentation from <code>documentation</code> directory)</p>
+    <pre><code class=" language-scala" theme="idea">dependencies {<br>    dokkaHtmlPlugin(&quot;com.virtuslab.dokka:dokka-site:0.1.0&quot;)<br>}<br><br>tasks.dokkaHtml {<br>    (pluginsConfiguration as MutableMap&lt;String, String&gt;) += &quot;ExternalDocsTooKey&quot; to &quot;documentation&quot;<br>}</code></pre>
+  </p>
+</div>
+</div>
+        </div>
+      </div>
+    </div>
+  </body>
 </html>
 
