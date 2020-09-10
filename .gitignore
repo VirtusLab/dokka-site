@@ -5,3 +5,6 @@ build/
 gradle/
 lib/
 out
+
+# generated during the build
+settings.xml
