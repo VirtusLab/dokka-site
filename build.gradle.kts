@@ -27,11 +27,16 @@ fun String.run(): String? {
     }
 }
 
+val ciGeneratedFiles = listOf("settings.xml")
+
 fun getVersion(): String {
     val base = "git describe --tags --exact-match".run() ?: "git describe --tags".run() ?: "0.1.0-SNAPSHOT"
 
-    val statusStr = "git status --porcelain".run()?.let { if (it.trim().length > 2) "-SNAPSHOT" else "" } ?: "-SNAPSHOT"
-    val v = base + statusStr
+    val changedFiles = "git status --porcelain".run()?.lines()
+        ?.filterNot { line -> line.isEmpty() || ciGeneratedFiles.find { file -> line.endsWith(" $file") } != null }
+
+    val statusStr = changedFiles?.let { if (it.isEmpty()) "" else "-SNAPSHOT" } ?: "-SNAPSHOT"
+    val v = base.removePrefix("v") + statusStr
     println("Using $v version.")
     return v
 }
