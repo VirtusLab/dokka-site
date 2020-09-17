@@ -204,15 +204,16 @@ class SitePagesCreator(cxt: DokkaContext) : BaseStaticSiteProcessor(cxt) {
             null
         }
 
-    private fun parseMarkdown(page: PreResolvedPage, dri: Set<DRI>, allDRIs: Map<String, DRI>): ContentNode {
+    private fun parseMarkdown(page: PreResolvedPage, dri: DRI, allDRIs: Map<String, DRI>): ContentNode {
         val nodes = if (page.hasMarkdown) {
             val parser = ExtendableMarkdownParser(page.code) { link ->
                 val driKey = if (link.startsWith("/")) {
                     // handle root related links
                     link.replace('/', '.').removePrefix(".")
                 } else {
-                    // todo handle relative links
-                    link
+                    val unSuffixedDri = dri.packageName!!.removeSuffix(".html").removeSuffix(".md")
+                    val parentDri = unSuffixedDri.take(unSuffixedDri.indexOfLast('.'::equals)).removePrefix("_.")
+                    "${parentDri}.${link.replace('/', '.')}"
                 }
                 allDRIs[driKey]
             }
@@ -227,7 +228,7 @@ class SitePagesCreator(cxt: DokkaContext) : BaseStaticSiteProcessor(cxt) {
 
             DocTagToContentConverter.buildContent(
                 docTag,
-                DCI(dri, ContentKind.Empty),
+                DCI(setOf(dri), ContentKind.Empty),
                 mySourceSet,
                 emptySet(),
                 PropertyContainer.empty()
@@ -236,7 +237,7 @@ class SitePagesCreator(cxt: DokkaContext) : BaseStaticSiteProcessor(cxt) {
         return PartiallyRenderedContent(
             page,
             nodes,
-            DCI(dri, ContentKind.Empty),
+            DCI(setOf(dri), ContentKind.Empty),
             myDisplaySourceSet,
             emptySet(),
             PropertyContainer.empty()
@@ -253,7 +254,7 @@ class SitePagesCreator(cxt: DokkaContext) : BaseStaticSiteProcessor(cxt) {
         val driMap = all.flatMap { flatten(it) }.map { it to pathToDri(it) }.toMap()
 
         fun templateToPage(myTemplate: LoadedTemplate): StaticPageNode {
-            val dri = setOf(pathToDri(myTemplate.relativePath(root)))
+            val dri = pathToDri(myTemplate.relativePath(root))
             val page = try {
                 val properties = myTemplate.templateFile.layout()
                     ?.let { mapOf("content" to myTemplate.templateFile.rawCode) } ?: emptyMap()
@@ -266,7 +267,14 @@ class SitePagesCreator(cxt: DokkaContext) : BaseStaticSiteProcessor(cxt) {
             }
             val content = parseMarkdown(page, dri, driMap)
             val children = myTemplate.children.map { templateToPage(it) }
-            return StaticPageNode(myTemplate.templateFile.title(), children, myTemplate, dri, emptyList(), content)
+            return StaticPageNode(
+                myTemplate.templateFile.title(),
+                children,
+                myTemplate,
+                setOf(dri),
+                emptyList(),
+                content
+            )
         }
         return all.map { templateToPage(it) }
     }
