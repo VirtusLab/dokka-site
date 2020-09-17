@@ -174,7 +174,7 @@ class SitePagesCreator(cxt: DokkaContext) : BaseStaticSiteProcessor(cxt) {
 
 
     private fun isValidTemplate(file: File): Boolean =
-        (file.isDirectory && !file.name.startsWith("_"))  ||
+        (file.isDirectory && !file.name.startsWith("_")) ||
                 file.name.endsWith(".md") ||
                 file.name.endsWith(".html")
 
@@ -204,9 +204,18 @@ class SitePagesCreator(cxt: DokkaContext) : BaseStaticSiteProcessor(cxt) {
             null
         }
 
-    private fun parseMarkdown(page: PreResolvedPage, dri: Set<DRI>, allDirs: Map<String, DRI>): ContentNode {
+    private fun parseMarkdown(page: PreResolvedPage, dri: Set<DRI>, allDRIs: Map<String, DRI>): ContentNode {
         val nodes = if (page.hasMarkdown) {
-            val parser = ExtendableMarkdownParser(page.code, allDirs::get)
+            val parser = ExtendableMarkdownParser(page.code) { link ->
+                val driKey = if (link.startsWith("/")) {
+                    // handle root related links
+                    link.replace('/', '.').removePrefix(".")
+                } else {
+                    // todo handle relative links
+                    link
+                }
+                allDRIs[driKey]
+            }
 
             val docTag = try {
                 parser.parse()
