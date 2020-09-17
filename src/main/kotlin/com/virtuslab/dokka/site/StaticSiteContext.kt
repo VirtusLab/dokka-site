@@ -2,6 +2,7 @@ package com.virtuslab.dokka.site
 
 import org.jetbrains.dokka.base.parsers.MarkdownParser
 import org.jetbrains.dokka.base.transformers.pages.comments.DocTagToContentConverter
+import org.jetbrains.dokka.links.Callable
 import org.jetbrains.dokka.links.DRI
 import org.jetbrains.dokka.model.doc.DocTag
 import org.jetbrains.dokka.model.doc.Text
@@ -66,17 +67,8 @@ class StaticSiteContext(val root: File, cxt: DokkaContext) {
 
     private fun parseMarkdown(page: PreResolvedPage, dri: DRI, allDRIs: Map<String, DRI>): ContentNode {
         val nodes = if (page.hasMarkdown) {
-            val parser = MarkdownParser { link ->
-                val driKey = if (link.startsWith("/")) {
-                    // handle root related links
-                    link.replace('/', '.').removePrefix(".")
-                } else {
-                    val unSuffixedDri = dri.packageName!!.removeSuffix(".html").removeSuffix(".md")
-                    val parentDri = unSuffixedDri.take(unSuffixedDri.indexOfLast('.'::equals)).removePrefix("_.")
-                    "${parentDri}.${link.replace('/', '.')}"
-                }
-                allDRIs[driKey]
-            }
+            val externalDri = getExternalDriResolver(dri, allDRIs)
+            val parser = MarkdownParser(externalDri)
 
             val docTag = try {
                 parser.parseStringToDocNode(page.code)
@@ -143,5 +135,44 @@ class StaticSiteContext(val root: File, cxt: DokkaContext) {
         }
         return all.map { templateToPage(it) }
     }
+
+    private fun getExternalDriResolver(dri: DRI, allDRIs: Map<String, DRI>): (String) -> DRI? = {
+        if (it.endsWith(".html") || it.endsWith(".md")) {
+            it.resolveLinkToFile(dri, allDRIs)
+
+        } else {
+            it.resolveLinkToApi()
+        }
+    }
+
+    private fun String.resolveLinkToFile(dri: DRI, allDRIs: Map<String, DRI>) =
+        if (startsWith("/")) { // handle root related links
+            replace('/', '.').removePrefix(".")
+
+        } else { // handle relative links
+            val unSuffixedDri = dri.packageName!!.removeSuffix(".html").removeSuffix(".md")
+            val parentDri = unSuffixedDri.take(unSuffixedDri.indexOfLast('.'::equals)).removePrefix("_.")
+            "${parentDri}.${replace('/', '.')}"
+
+        }.let { allDRIs[it] }
+
+    private fun String.resolveLinkToApi(): DRI =
+        if ('#' in this) { // member fun
+            val (packageName, classNameAndRest) = split('#')
+            if ("::" in classNameAndRest) {
+                val (classNames, callableName) = classNameAndRest.split("::")
+                val callable = Callable(name = callableName, params = emptyList())
+                DRI(packageName = packageName, classNames = classNames, callable = callable)
+
+            } else {
+                DRI(packageName = packageName, classNames = classNameAndRest)
+            }
+
+        } else if ("::" in this) { // top level fun
+            val (packageName, callableName) = split("::")
+            val callable = Callable(name = callableName, params = emptyList())
+            DRI(packageName = packageName, callable = callable)
+
+        } else DRI(packageName = this) // package
 }
 
