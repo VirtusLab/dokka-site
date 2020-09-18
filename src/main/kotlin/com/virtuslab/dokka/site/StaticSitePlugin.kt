@@ -27,7 +27,7 @@ class StaticSitePlugin : DokkaPlugin() {
 
     val customRenderer by extending {
         (CoreExtensions.renderer
-                providing { ctx -> RendererDispatcher(ctx) }
+                providing { ctx -> SiteRenderer(ctx) }
                 override dokkaBase.htmlRenderer)
     }
 

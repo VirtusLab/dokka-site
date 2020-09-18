@@ -8,7 +8,7 @@ import java.net.URI
 
 
 // this will be rewritten after PR is merged to dokka
-class RendererDispatcher(context: DokkaContext) : org.jetbrains.dokka.base.renderers.html.HtmlRenderer(context) {
+open class SiteRenderer(context: DokkaContext) : org.jetbrains.dokka.base.renderers.html.HtmlRenderer(context) {
 
     override fun buildPageContent(context: FlowContent, page: ContentPage) {
         when (page) {
