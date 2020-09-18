@@ -2,6 +2,7 @@ package com.virtuslab.dokka.site
 
 import kotlinx.html.*
 import kotlinx.html.stream.createHTML
+import org.jetbrains.dokka.model.DisplaySourceSet
 import org.jetbrains.dokka.pages.*
 import org.jetbrains.dokka.plugability.DokkaContext
 import java.net.URI
@@ -30,6 +31,12 @@ open class SiteRenderer(context: DokkaContext) : org.jetbrains.dokka.base.render
             else -> content.build(context, page)
         }
     }
+
+    override fun FlowContent.buildTable(
+        node: ContentTable,
+        pageContext: ContentPage,
+        sourceSetRestriction: Set<DisplaySourceSet>?
+    ) = buildDefaultTable(node, pageContext, sourceSetRestriction)
 
     private fun render(c: PartiallyRenderedContent, p: ContentPage): String {
         val parsed =
