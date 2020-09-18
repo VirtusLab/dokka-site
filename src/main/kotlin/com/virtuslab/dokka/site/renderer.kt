@@ -10,6 +10,13 @@ import java.net.URI
 // this will be rewritten after PR is merged to dokka
 open class SiteRenderer(context: DokkaContext) : org.jetbrains.dokka.base.renderers.html.HtmlRenderer(context) {
 
+    fun withHtml(context: FlowContent, content: String) {
+        when (context){
+            is HTMLTag -> context.unsafe { +content }
+            else -> context.div { unsafe { +content } }
+        }
+    }
+
     override fun buildPageContent(context: FlowContent, page: ContentPage) {
         when (page) {
             is BaseStaticSiteProcessor.StaticPageNode ->
@@ -17,12 +24,9 @@ open class SiteRenderer(context: DokkaContext) : org.jetbrains.dokka.base.render
             else -> context.buildNavigation(page)
         }
 
-        fun FlowContent.render(txt: String) {
-            div { unsafe { +txt } }
-        }
         when (val content = page.content) {
             is PartiallyRenderedContent ->
-                context.render(render(content, page))
+                withHtml(context,  render(content, page))
             else -> content.build(context, page)
         }
     }
