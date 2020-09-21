@@ -60,9 +60,11 @@ repositories {
     maven(url = "https://dl.bintray.com/kotlin/kotlin-dev")
 }
 
+val dokka_version: String by project
+
 dependencies {
-    val dokka_version: String by project
     compileOnly("org.jetbrains.dokka:dokka-core:$dokka_version")
+    apiElements("org.jetbrains.dokka:dokka-core:$dokka_version")
     implementation("org.jetbrains.dokka:dokka-base:$dokka_version")
     implementation("com.vladsch.flexmark:flexmark-all:0.42.12")
     implementation("nl.big-o:liqp:0.6.7")
