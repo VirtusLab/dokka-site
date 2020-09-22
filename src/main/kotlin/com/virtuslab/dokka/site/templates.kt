@@ -14,6 +14,9 @@ import com.vladsch.flexmark.parser.ParserEmulationProfile
 import com.vladsch.flexmark.util.options.DataHolder
 import com.vladsch.flexmark.util.options.MutableDataSet
 import liqp.Template
+import liqp.TemplateContext
+import liqp.nodes.LNode
+import liqp.tags.Tag
 import java.io.File
 import java.util.*
 
@@ -38,6 +41,7 @@ val defaultMarkdownOptions: DataHolder =
 
 data class RenderingContext(
     val properties: Map<String, Any>,
+    val includes: Map<String, String> = emptyMap(),
     val layouts: Map<String, TemplateFile> = emptyMap(),
     val resolving: Set<String> = emptySet(),
     val markdownOptions: DataHolder = defaultMarkdownOptions,
@@ -105,12 +109,14 @@ data class TemplateFile(
     fun hasFrame(): Boolean = stringSetting("hasFrame") != "false"
 
 
-    fun resolveMarkdown(ctx: RenderingContext): PreResolvedPage =
-        resolveInner(
-            ctx = ctx.copy(properties = HashMap(ctx.properties) + ("page" to mapOf("title" to title()))),
+    fun resolveMarkdown(ctx: RenderingContext): PreResolvedPage {
+        val properties = HashMap(ctx.properties) + ("page" to mapOf("title" to title())) + HashMap(ctx.includes)
+        return resolveInner(
+            ctx = ctx.copy(properties = properties),
             stopAtHtml = true,
             !isHtml // This is toplevel template
         )
+    }
 
     fun resolveToHtml(ctx: RenderingContext, hasMarkdown: Boolean): PreResolvedPage =
         resolveInner(ctx, stopAtHtml = false, hasMarkdown)
@@ -130,6 +136,7 @@ data class TemplateFile(
         return if (stopAtHtml && isHtml) {
             PreResolvedPage(ctx.properties["content"].toString(), LayoutInfo(this, ctx), hasMarkdown)
         } else {
+            Tag.registerTag(MyInclude())
             val rendered =
                 Template.parse(this.rawCode).render(HashMap(ctx.properties)) // Library requires mutable maps..
             val code = if (!isHtml) rendered else {
@@ -166,8 +173,23 @@ fun loadTemplateFile(file: File): TemplateFile {
 
     return TemplateFile(
         file = file,
-        file.name.endsWith(".html"),
+        isHtml = file.name.endsWith(".html"),
         rawCode = content.joinToString(LineSeparator),
         settings = yamlCollector.data
     )
+}
+
+
+class MyInclude : Tag() {
+    override fun render(context: TemplateContext, vararg nodes: LNode): Any = try {
+        if (nodes.size > 1) {
+            println("ERROR: Multiple include nodes") // TODO (#14): provide proper error handling
+        }
+        nodes[0].render(context)
+        val includeResource = super.asString(context.get(nodes[0].toString()))
+        Template.parse(includeResource, context.flavor).render(context.variables)
+    } catch (e: Exception) {
+        println("ERROR: include rendering failure: $e") // TODO (#14): provide proper error handling
+        ""
+    }
 }

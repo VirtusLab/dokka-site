@@ -2,6 +2,6 @@
 title: Includes MD
 ---
 
-{% include md_include_from_includes_dir.md %}
+{% myinclude md_include_from_includes_dir.md %}
 
-{% include html_include_from_includes_dir.html %}
+{% myinclude html_include_from_includes_dir.html %}
