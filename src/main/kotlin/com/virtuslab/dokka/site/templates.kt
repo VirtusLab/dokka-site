@@ -150,6 +150,26 @@ const val LineSeparator = "\n"
 
 val yamlParser: Parser = Parser.builder(defaultMarkdownOptions).build()
 
+
+abstract class PreProcessor {
+
+    abstract fun processMarkdown(original: String): String
+
+    object Registry {
+        var registered = emptySet<PreProcessor>()
+
+        fun clear() {
+            registered = emptySet()
+        }
+
+        fun register(processor: PreProcessor) {
+            registered = registered + processor
+        }
+
+        fun process(code: String): String = registered.fold(code){ c, p -> p.processMarkdown(c) }
+    }
+}
+
 fun loadTemplateFile(file: File): TemplateFile {
     val lines = file.readLines()
 

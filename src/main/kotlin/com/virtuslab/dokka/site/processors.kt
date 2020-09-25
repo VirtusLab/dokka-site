@@ -206,7 +206,8 @@ class SitePagesCreator(cxt: DokkaContext) : BaseStaticSiteProcessor(cxt) {
 
     private fun parseMarkdown(page: PreResolvedPage, dri: Set<DRI>, allDirs: Map<String, DRI>): ContentNode {
         val nodes = if (page.hasMarkdown) {
-            val parser = ExtendableMarkdownParser(page.code, allDirs::get)
+            val processedCode = PreProcessor.Registry.process(page.code)
+            val parser = ExtendableMarkdownParser(processedCode, allDirs::get)
 
             val docTag = try {
                 parser.parse()
