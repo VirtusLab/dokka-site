@@ -1,0 +1,78 @@
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1" charset="UTF-8">
+    <title>Tables</title>
+    <link href="../../../images/logo-icon.svg" rel="icon" type="image/svg">
+    <script type="text/javascript" src="../../../scripts/clipboard.js" async="async"></script>
+    <script type="text/javascript" src="../../../scripts/navigation-loader.js" async="async"></script>
+    <script type="text/javascript" src="../../../scripts/platform-content-handler.js" async="async"></script>
+    <script type="text/javascript" src="../../../scripts/main.js" async="async"></script>
+    <link href="../../../styles/style.css" rel="Stylesheet">
+    <link href="../../../styles/logo-styles.css" rel="Stylesheet">
+    <link href="../../../styles/jetbrains-mono.css" rel="Stylesheet">
+    <link href="../../../styles/main.css" rel="Stylesheet">
+    <script>var pathToRoot = "../../../";</script>
+  </head>
+  <body>
+    <div id="container">
+      <div id="leftColumn">
+        <div id="logo"></div>
+        <div id="paneSearch"></div>
+        <div id="sideMenu"></div>
+      </div>
+      <div id="main">
+        <div id="leftToggler"><span class="icon-toggler"></span></div>
+        <div id="searchBar"></div>
+        <script type="text/javascript" src="../../../scripts/pages.js"></script>
+        <script type="text/javascript" src="../../../scripts/main.js"></script>
+        <div id="content" pageIds="_.docs.static-page.samples.tables.md////PointingToDeclaration//-1000789677">
+          <div class="breadcrumbs"><a href="../../index.html"></a>/<a href="../../static-page/index.html">Layouts</a>/<a href="index.html">Samples</a>/<a href="../-samples/tables.html">Tables</a></div>
+<header>
+    Powered by <a href="https://www.virtuslab.com/">VirtusLab</a>
+</header>
+<div>
+    <div>
+  <p class="paragraph">
+    <h2 class=""> Tables</h2>
+    <p class="paragraph">Some random table (to show how we render it).</p>
+    <h2 class=""> SBT Commands Cheat Sheet </h2>
+    <p class="paragraph">The basics of working with Dotty codebase are documented <a href="https://dotty.epfl.ch/docs/contributing/getting-started.html">here</a> and <a href="https://dotty.epfl.ch/docs/contributing/workflow.html">here</a>. Below is a cheat sheet of some frequently used commands (to be used from SBT console – <code>sbt</code>).</p>
+    <table>
+      <thead>
+        <tr>
+          <th>                        Command                       </th>
+          <th>                                                          Description                                                          </th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>dotc ../issues/Playground.scala</code></td>
+          <td> Compile the given file – path relative to the Dotty directory. Output the compiled class files to the Dotty directory itself. </td>
+        </tr>
+        <tr>
+          <td><code>dotr Playground</code></td>
+          <td> Run the compiled class <code>Playground</code>. Dotty directory is on classpath by default.                                              </td>
+        </tr>
+        <tr>
+          <td><code>repl</code></td>
+          <td> Start REPL                                                                                                                    </td>
+        </tr>
+        <tr>
+          <td><code>testOnly dotty.tools.dotc.CompilationTests -- *pos</code></td>
+          <td> Run test (method) <code>pos</code> from <code>CompilationTests</code> suite.                                                                        </td>
+        </tr>
+        <tr>
+          <td><code>testCompilation sample</code></td>
+          <td> In all test suites, run test files containing the word <code>sample</code> in their title.                                               </td>
+        </tr>
+      </tbody>
+    </table>
+  </p>
+</div>
+</div>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>
+
