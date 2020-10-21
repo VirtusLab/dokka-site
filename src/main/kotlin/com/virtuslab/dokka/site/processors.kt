@@ -2,34 +2,25 @@ package com.virtuslab.dokka.site
 
 import org.jetbrains.dokka.base.renderers.html.NavigationNode
 import org.jetbrains.dokka.base.renderers.html.NavigationPage
-import org.jetbrains.dokka.base.transformers.pages.comments.DocTagToContentConverter
 import org.jetbrains.dokka.links.DRI
 import org.jetbrains.dokka.model.Documentable
 import org.jetbrains.dokka.model.doc.Text
-import org.jetbrains.dokka.model.properties.PropertyContainer
-import org.jetbrains.dokka.model.toDisplaySourceSet
 import org.jetbrains.dokka.pages.*
-import org.jetbrains.dokka.plugability.DokkaContext
 import org.jetbrains.dokka.transformers.pages.PageTransformer
 import java.io.File
 
 const val ExternalDocsTooKey = "ExternalDocsTooKey"
 
 val docsRootDRI = DRI.topLevel.copy(extra = "_top_level_index")
+val docsDRI = DRI.topLevel.copy(extra = "_docs_level_index")
+val apiPageDRI = DRI(classNames = "api", extra = "__api__")
 
-abstract class BaseStaticSiteProcessor(cxt: DokkaContext) : PageTransformer {
+abstract class BaseStaticSiteProcessor(private val staticSiteContext: StaticSiteContext?) : PageTransformer {
 
     final override fun invoke(input: RootPageNode): RootPageNode =
-        rawRoot?.let { transform(input) } ?: input
+        staticSiteContext?.let { transform(input, it) } ?: input
 
-    protected abstract fun transform(input: RootPageNode): RootPageNode
-
-    private val rawRoot: File? = cxt.configuration.pluginsConfiguration.get(ExternalDocsTooKey)?.let { File(it) }
-    val root = rawRoot ?: File("unknown")
-
-    protected val mySourceSet = cxt.configuration.sourceSets.toSet()
-    protected val myDisplaySourceSet = mySourceSet.map { it.toDisplaySourceSet() }.toSet()
-    protected val docsFile = File(root, "docs")
+    protected abstract fun transform(input: RootPageNode, ctx: StaticSiteContext): RootPageNode
 
     data class LoadedTemplate(val templateFile: TemplateFile, val children: List<LoadedTemplate>, val file: File) {
         fun isIndexPage() = file.isFile && (file.name == "index.md" || file.name == "index.html")
@@ -39,7 +30,7 @@ abstract class BaseStaticSiteProcessor(cxt: DokkaContext) : PageTransformer {
 
     data class StaticPageNode(
         override val name: String,
-        override val children: List<StaticPageNode>,
+        override val children: List<PageNode>,
         val loadedTemplate: LoadedTemplate,
         override val dri: Set<DRI>,
         override val embeddedResources: List<String> = emptyList(),
@@ -62,10 +53,10 @@ abstract class BaseStaticSiteProcessor(cxt: DokkaContext) : PageTransformer {
                 content = content,
                 dri = dri,
                 embeddedResources = embeddedResources,
-                children = children.map { it as StaticPageNode })
+                children = children
+            )
 
-        override fun modified(name: String, children: List<PageNode>): PageNode =
-            copy(name = name, children = children.map { it as StaticPageNode })
+        override fun modified(name: String, children: List<PageNode>): PageNode = copy(name = name, children = children)
 
         fun resources() = when (content) {
             is PartiallyRenderedContent ->
@@ -77,7 +68,7 @@ abstract class BaseStaticSiteProcessor(cxt: DokkaContext) : PageTransformer {
     }
 }
 
-class SiteResourceManager(cxt: DokkaContext) : BaseStaticSiteProcessor(cxt) {
+class SiteResourceManager(ctx: StaticSiteContext?) : BaseStaticSiteProcessor(ctx) {
     private fun listResources(nodes: List<PageNode>): Set<String> =
         nodes.flatMap {
             when (it) {
@@ -86,12 +77,12 @@ class SiteResourceManager(cxt: DokkaContext) : BaseStaticSiteProcessor(cxt) {
             }
         }.toSet()
 
-    override fun transform(input: RootPageNode): RootPageNode {
-        val images = File(root, "images").walkTopDown().filter { it.isFile }
-            .map { root.toPath().relativize(it.toPath()).toString() }
+    override fun transform(input: RootPageNode, ctx: StaticSiteContext): RootPageNode {
+        val images = File(ctx.root, "images").walkTopDown().filter { it.isFile }
+            .map { ctx.root.toPath().relativize(it.toPath()).toString() }
         val resources = listResources(input.children) + images
         val resourcePages = resources.map { path ->
-            RendererSpecificResourcePage(path, emptyList(), RenderingStrategy.Write(File(root, path).readText()))
+            RendererSpecificResourcePage(path, emptyList(), RenderingStrategy.Write(File(ctx.root, path).readText()))
         }
         val modified = input.transformContentPagesTree {
             when (it) {
@@ -103,179 +94,93 @@ class SiteResourceManager(cxt: DokkaContext) : BaseStaticSiteProcessor(cxt) {
     }
 }
 
-class SitePagesCreator(cxt: DokkaContext) : BaseStaticSiteProcessor(cxt) {
+data class AContentPage(
+    override val name: String,
+    override val children: List<PageNode>,
+    override val content: ContentNode,
+    override val dri: Set<DRI>,
+    override val embeddedResources: List<String> = emptyList(),
+) : ContentPage {
+    override val documentable: Documentable? = null
 
-    override fun transform(input: RootPageNode): RootPageNode {
-        val (navigationPage, rest) = input.children.partition { it is NavigationPage }
-        val defaultNavigation = (navigationPage.single() as NavigationPage).root
+    override fun modified(
+        name: String,
+        content: ContentNode,
+        dri: Set<DRI>,
+        embeddedResources: List<String>,
+        children: List<PageNode>
+    ): ContentPage = copy(name, children, content, dri, embeddedResources)
 
-        val allFiles = docsFile.listFiles()?.toList() ?: emptyList()
-        val (indexes, children) = loadFiles(allFiles).partition { it.loadedTemplate.isIndexPage() }
+    override fun modified(name: String, children: List<PageNode>): PageNode = copy(name, children = children)
+}
+
+
+class SitePagesCreator(ctx: StaticSiteContext?) : BaseStaticSiteProcessor(ctx) {
+
+    private fun processRootPage(input: RootPageNode, children: List<PageNode> = emptyList()): AContentPage =
+        when (input) {
+            is ContentPage ->
+                AContentPage(
+                    input.name,
+                    children,
+                    input.content,
+                    setOf(apiPageDRI),
+                    input.embeddedResources
+                )
+            is RendererSpecificRootPage ->
+                children.filterIsInstance<RootPageNode>().single().let { nestedRoot ->
+                    processRootPage(
+                        nestedRoot,
+                        children.filter { it != nestedRoot } + nestedRoot.children)
+                }
+            else -> TODO("UNSUPPORTED! ${input.javaClass.name}")
+        }
+
+    override fun transform(input: RootPageNode, ctx: StaticSiteContext): RootPageNode {
+        val (contentPage, others) = input.children.partition { it is ContentPage }
+        val modifiedModuleRoot = processRootPage(input, contentPage)
+        val allFiles = ctx.docsFile.listFiles()?.toList() ?: emptyList()
+        val (indexes, children) = ctx.loadFiles(allFiles).partition { it.loadedTemplate.isIndexPage() }
         if (indexes.size > 1) println("ERROR: Multiple index pages found $indexes}") // TODO (#14): provide proper error handling
 
-        fun toNavigationNode(c: StaticPageNode): NavigationNode =
-            NavigationNode(
-                c.loadedTemplate.templateFile.title(),
-                c.dri.first(),
-                myDisplaySourceSet,
-                c.children.map { toNavigationNode(it) }
-            )
+        val rootContent =
+            indexes.map { it.content }.firstOrNull() ?: ctx.asContent(Text(), DRI(extra = "root_content"))[0]
 
-        val apiPageDri = DRI.topLevel.copy(extra = "_api_")
+        val root = AContentPage(
+            input.name,
+            listOf(modifiedModuleRoot.modified(name = "API")) + children,
+            rootContent,
+            setOf(docsDRI),
+            emptyList()
+        )
 
-        val mergedRoots = NavigationNode(
-            defaultNavigation.name,
-            defaultNavigation.dri,
-            defaultNavigation.sourceSets,
-            children.map { toNavigationNode(it) } + listOf(
-                NavigationNode(
-                    "API",
-                    apiPageDri,
-                    defaultNavigation.sourceSets,
-                    defaultNavigation.children
+        return RendererSpecificRootPage(
+            modifiedModuleRoot.name,
+            listOf(root) + others,
+            RenderingStrategy.DoNothing
+        )
+    }
+
+}
+
+class RootIndexPageCreator(ctx: StaticSiteContext?) : BaseStaticSiteProcessor(ctx) {
+    override fun transform(input: RootPageNode, ctx: StaticSiteContext): RootPageNode =
+         ctx.indexPage()?.let {
+            val (contentNodes, nonContent) = input.children.partition { it is ContentNode }
+            val (navigations, rest) = nonContent.partition { it is NavigationPage }
+            val modifiedNavigation = navigations.map {
+                val root = (it as NavigationPage).root
+                val (api, rest) = root.children.partition { it.dri == apiPageDRI }
+                NavigationPage(
+                    NavigationNode(
+                        input.name,
+                        docsRootDRI,
+                        root.sourceSets,
+                        rest + api
+                    )
                 )
-            )
-        )
-        val original = indexes.firstOrNull()?.let { indexPage ->
-            rest.map {
-                when (it) {
-                    is ModulePageNode ->
-                        if (it.dri.contains(DRI.topLevel)) {
-                            val packageList =
-                                PackagePageNode(
-                                    "_root_",
-                                    it.content,
-                                    setOf(apiPageDri),
-                                    null,
-                                    emptyList(),
-                                    it.embeddedResources
-                                )
-                            it.modified(content = indexPage.content, children = it.children + listOf(packageList))
-                        } else it
-                    else ->
-                        it
-                }
             }
-        } ?: rest
-
-        val indexFiles = listOf(File(root, "index.html"), File(root, "index.md")).filter { it.exists() }
-        if (indexFiles.size > 1) println("ERROR: Multiple root index pages found: ${indexFiles.map { it.absolutePath }}") // TODO (#14): provide proper error handling
-
-        val topLevelIndexPage = loadFiles(indexFiles.take(1)).map { it.modified(dri = setOf(docsRootDRI)) }
-
-        return input.modified(children = original + topLevelIndexPage + listOf(NavigationPage(mergedRoots)) + children)
-    }
-
-    private val layouts: Map<String, TemplateFile> by lazy {
-        val layoutRoot = File(root, "_layouts")
-        val dirs: Array<File> = layoutRoot.listFiles() ?: emptyArray()
-        dirs.map { loadTemplateFile(it) }.map { it.name() to it }.toMap()
-    }
-
-
-    private fun isValidTemplate(file: File): Boolean =
-        (file.isDirectory && !file.name.startsWith("_")) ||
-                file.name.endsWith(".md") ||
-                file.name.endsWith(".html")
-
-
-    private fun loadTemplate(from: File): LoadedTemplate? =
-        if (!isValidTemplate(from)) null else try {
-            val (indexes, children) = (from.listFiles()?.mapNotNull { loadTemplate(it) }
-                ?: emptyList()).partition { it.isIndexPage() }
-            if (indexes.size > 1)
-                println("ERROR: Multiple index pages for $from found in ${indexes.map { it.file }}") // TODO (#14): provide proper error handling
-
-            fun loadIndexPage(): TemplateFile {
-                val indexFiles = from.listFiles { file -> file.name == "index.md" || file.name == "index.html" }
-                return when (indexFiles.size) {
-                    0 -> emptyTemplate(from)
-                    1 -> loadTemplateFile(indexFiles.first()).copy(file = from)
-                    else -> throw java.lang.RuntimeException("ERROR: Multiple index pages found under ${from.path}")
-                }
-            }
-
-            val templateFile = if (from.isDirectory) loadIndexPage() else loadTemplateFile(from)
-
-            LoadedTemplate(templateFile, children, from)
-
-        } catch (e: RuntimeException) {
-            e.printStackTrace() // TODO (#14): provide proper error handling
-            null
-        }
-
-    private fun parseMarkdown(page: PreResolvedPage, dri: DRI, allDRIs: Map<String, DRI>): ContentNode {
-        val nodes = if (page.hasMarkdown) {
-            val parser = ExtendableMarkdownParser(page.code) { link ->
-                val driKey = if (link.startsWith("/")) {
-                    // handle root related links
-                    link.replace('/', '.').removePrefix(".")
-                } else {
-                    val unSuffixedDri = dri.packageName!!.removeSuffix(".html").removeSuffix(".md")
-                    val parentDri = unSuffixedDri.take(unSuffixedDri.indexOfLast('.'::equals)).removePrefix("_.")
-                    "${parentDri}.${link.replace('/', '.')}"
-                }
-                allDRIs[driKey]
-            }
-
-            val docTag = try {
-                parser.parse()
-            } catch (e: Throwable) {
-                val msg = "Error rendering (dri = $dri): ${e.message}"
-                println("ERROR: $msg") // TODO (#14): provide proper error handling
-                Text(msg, emptyList())
-            }
-
-            DocTagToContentConverter.buildContent(
-                docTag,
-                DCI(setOf(dri), ContentKind.Empty),
-                mySourceSet,
-                emptySet(),
-                PropertyContainer.empty()
-            )
-        } else emptyList()
-        return PartiallyRenderedContent(
-            page,
-            nodes,
-            DCI(setOf(dri), ContentKind.Empty),
-            myDisplaySourceSet,
-            emptySet(),
-            PropertyContainer.empty()
-        )
-    }
-
-    private fun loadFiles(files: List<File>): List<StaticPageNode> {
-        val all = files.mapNotNull { loadTemplate(it) }
-        fun flatten(it: LoadedTemplate): List<String> =
-            listOf(it.relativePath(root)) + it.children.flatMap { flatten(it) }
-
-        fun pathToDri(path: String) = DRI("_.$path")
-
-        val driMap = all.flatMap { flatten(it) }.map { it to pathToDri(it) }.toMap()
-
-        fun templateToPage(myTemplate: LoadedTemplate): StaticPageNode {
-            val dri = pathToDri(myTemplate.relativePath(root))
-            val page = try {
-                val properties = myTemplate.templateFile.layout()
-                    ?.let { mapOf("content" to myTemplate.templateFile.rawCode) } ?: emptyMap()
-
-                myTemplate.templateFile.resolveMarkdown(RenderingContext(properties, layouts))
-            } catch (e: Throwable) {
-                val msg = "Error rendering $myTemplate: ${e.message}"
-                println("ERROR: $msg") // TODO (#14): provide proper error handling
-                PreResolvedPage("", null, true)
-            }
-            val content = parseMarkdown(page, dri, driMap)
-            val children = myTemplate.children.map { templateToPage(it) }
-            return StaticPageNode(
-                myTemplate.templateFile.title(),
-                children,
-                myTemplate,
-                setOf(dri),
-                emptyList(),
-                content
-            )
-        }
-        return all.map { templateToPage(it) }
-    }
+            val newRoot = it.modified(dri = setOf(docsRootDRI), children = contentNodes)
+            input.modified(children = listOf(newRoot) + rest + modifiedNavigation)
+        } ?: input
 }

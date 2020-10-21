@@ -64,7 +64,11 @@ val dokka_version: String by project
 
 dependencies {
     compileOnly("org.jetbrains.dokka:dokka-core:$dokka_version")
+
+    // Expose dependency to dokka in .pom file
     apiElements("org.jetbrains.dokka:dokka-core:$dokka_version")
+    apiElements("org.jetbrains.dokka:dokka-base:$dokka_version")
+
     implementation("org.jetbrains.dokka:dokka-base:$dokka_version")
     implementation("com.vladsch.flexmark:flexmark-all:0.42.12")
     implementation("nl.big-o:liqp:0.6.7")
@@ -119,5 +123,6 @@ publishing {
 
 // Configure dokka
 tasks.dokkaHtml {
-    pluginsConfiguration.put("ExternalDocsTooKey", "documentation")
+    // TODO (#37): use pluginConfiguration
+    pluginsMapConfiguration.put("ExternalDocsTooKey", "documentation")
 }
