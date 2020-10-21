@@ -2,6 +2,7 @@ package com.virtuslab.dokka.site
 
 import kotlinx.html.*
 import kotlinx.html.stream.createHTML
+import org.jetbrains.dokka.base.renderers.isImage
 import org.jetbrains.dokka.pages.*
 import org.jetbrains.dokka.plugability.DokkaContext
 import java.net.URI
@@ -63,8 +64,9 @@ open class SiteRenderer(context: DokkaContext) : org.jetbrains.dokka.base.render
             createHTML().html {
                 head {
                     meta(name = "viewport", content = "width=device-width, initial-scale=1", charset = "UTF-8")
-                    title(page.loadedTemplate.templateFile.title())
-                    (if (page.hasFrame()) resources else page.resources()).forEach {
+                    title(page.name)
+                    link(href = page.root("images/logo-icon.svg"), rel = "icon", type = "image/svg")
+                    resources.forEach {
                         when {
                             it.substringBefore('?').substringAfterLast('.') == "css" -> link(
                                 rel = LinkRel.stylesheet,
@@ -76,6 +78,7 @@ open class SiteRenderer(context: DokkaContext) : org.jetbrains.dokka.base.render
                             ) {
                                 async = true
                             }
+                            it.isImage() -> link(href = page.root(it))
                             else -> unsafe { +it }
                         }
                     }
@@ -83,10 +86,12 @@ open class SiteRenderer(context: DokkaContext) : org.jetbrains.dokka.base.render
                 }
                 body {
                     if (page.hasFrame()) defaultFrame(page, content) else buildPageContent(this, page)
+
                 }
             }
 
-    private fun FlowContent.defaultFrame(page: PageNode, content: FlowContent.() -> Unit): Unit = div {
+    private fun FlowContent.defaultFrame(page: PageNode, content: FlowContent.() -> Unit): Unit =
+    div {
         id = "container"
         div {
             id = "leftColumn"
@@ -104,6 +109,10 @@ open class SiteRenderer(context: DokkaContext) : org.jetbrains.dokka.base.render
         }
         div {
             id = "main"
+            div {
+                id = "leftToggler"
+                span("icon-toggler")
+            }
             div {
                 id = "searchBar"
             }
