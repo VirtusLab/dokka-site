@@ -19,6 +19,7 @@ class StaticSitePlugin : DokkaPlugin() {
         dokkaBase.htmlPreprocessors providing { ctx ->
             SitePagesCreator(loadStaticSiteContext(ctx))
         } order {
+            after(dokkaBase.rootCreator)
             before(dokkaBase.navigationPageInstaller)
             before(dokkaBase.scriptsInstaller)
             before(dokkaBase.stylesInstaller)
@@ -31,7 +32,7 @@ class StaticSitePlugin : DokkaPlugin() {
             RootIndexPageCreator(loadStaticSiteContext(ctx))
         } order {
             after(dokkaBase.navigationPageInstaller)
-                before(dokkaBase.scriptsInstaller)
+            before(dokkaBase.scriptsInstaller)
             before(dokkaBase.stylesInstaller)
         }
     }
