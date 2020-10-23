@@ -1,5 +1,6 @@
 package com.virtuslab.dokka.site
 
+import org.jetbrains.dokka.base.parsers.MarkdownParser
 import org.jetbrains.dokka.base.transformers.pages.comments.DocTagToContentConverter
 import org.jetbrains.dokka.links.DRI
 import org.jetbrains.dokka.model.doc.DocTag
@@ -13,7 +14,7 @@ import org.jetbrains.dokka.pages.PageNode
 import org.jetbrains.dokka.plugability.DokkaContext
 import java.io.File
 
-class StaticSiteContext(val root: File, cxt: DokkaContext){
+class StaticSiteContext(val root: File, cxt: DokkaContext) {
     val docsFile = File(root, "docs")
 
     fun indexPage(): BaseStaticSiteProcessor.StaticPageNode? {
@@ -65,7 +66,7 @@ class StaticSiteContext(val root: File, cxt: DokkaContext){
 
     private fun parseMarkdown(page: PreResolvedPage, dri: DRI, allDRIs: Map<String, DRI>): ContentNode {
         val nodes = if (page.hasMarkdown) {
-            val parser = ExtendableMarkdownParser(page.code) { link ->
+            val parser = MarkdownParser { link ->
                 val driKey = if (link.startsWith("/")) {
                     // handle root related links
                     link.replace('/', '.').removePrefix(".")
@@ -78,7 +79,7 @@ class StaticSiteContext(val root: File, cxt: DokkaContext){
             }
 
             val docTag = try {
-                parser.parse()
+                parser.parseStringToDocNode(page.code)
             } catch (e: Throwable) {
                 val msg = "Error rendering (dri = $dri): ${e.message}"
                 println("ERROR: $msg") // TODO (#14): provide proper error handling
@@ -105,7 +106,10 @@ class StaticSiteContext(val root: File, cxt: DokkaContext){
         PropertyContainer.empty()
     )
 
-    fun loadFiles(files: List<File>, customChildren: List<PageNode> = emptyList()): List<BaseStaticSiteProcessor.StaticPageNode> {
+    fun loadFiles(
+        files: List<File>,
+        customChildren: List<PageNode> = emptyList()
+    ): List<BaseStaticSiteProcessor.StaticPageNode> {
         val all = files.mapNotNull { loadTemplate(it) }
         fun flatten(it: BaseStaticSiteProcessor.LoadedTemplate): List<String> =
             listOf(it.relativePath(root)) + it.children.flatMap { flatten(it) }
