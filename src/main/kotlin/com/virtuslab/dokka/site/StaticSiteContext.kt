@@ -17,6 +17,7 @@ import org.jetbrains.dokka.plugability.DokkaContext
 import java.io.File
 import java.net.MalformedURLException
 import java.net.URL
+import java.nio.file.Path
 
 class StaticSiteContext(val root: File, cxt: DokkaContext) {
     val docsFile = File(root, "docs")
@@ -68,9 +69,14 @@ class StaticSiteContext(val root: File, cxt: DokkaContext) {
             null
         }
 
-    private fun parseMarkdown(page: PreResolvedPage, dri: DRI, allDRIs: Map<String, DRI>): ContentNode {
+    private fun parseMarkdown(
+        page: PreResolvedPage,
+        dri: DRI,
+        allDRIs: Map<Path, DRI>,
+        proceededFilePath: String
+    ): ContentNode {
         val nodes = if (page.hasMarkdown) {
-            val externalDri = getExternalDriResolver(dri, allDRIs)
+            val externalDri = getExternalDriResolver(allDRIs, proceededFilePath)
             val parser = MarkdownParser(externalDri)
 
             val docTag = try {
@@ -111,7 +117,10 @@ class StaticSiteContext(val root: File, cxt: DokkaContext) {
 
         fun pathToDri(path: String) = DRI("_.$path")
 
-        val driMap = all.flatMap { flatten(it) }.map { it to pathToDri(it) }.toMap()
+        val driMap = all.flatMap(::flatten)
+            .flatMap(::createBothMdAndHtmlKeys)
+            .map { Path.of(it).normalize().run { this to pathToDri(this.toString()) } }
+            .toMap()
 
         fun templateToPage(myTemplate: BaseStaticSiteProcessor.LoadedTemplate): BaseStaticSiteProcessor.StaticPageNode {
             val dri = pathToDri(myTemplate.relativePath(root))
@@ -125,7 +134,12 @@ class StaticSiteContext(val root: File, cxt: DokkaContext) {
                 println("ERROR: $msg") // TODO (#14): provide proper error handling
                 PreResolvedPage("", null, true)
             }
-            val content = parseMarkdown(page, dri, driMap)
+
+            val proceededFilePath = myTemplate.file.path
+                .removePrefix("documentation")
+                .dropLastWhile { x -> x != File.separatorChar }
+                .removeSuffix(File.separator)
+            val content = parseMarkdown(page, dri, driMap, proceededFilePath)
             val children = myTemplate.children.map(::templateToPage)
             return BaseStaticSiteProcessor.StaticPageNode(
                 myTemplate.templateFile.title(),
@@ -139,29 +153,31 @@ class StaticSiteContext(val root: File, cxt: DokkaContext) {
         return all.map(::templateToPage)
     }
 
-    private fun getExternalDriResolver(dri: DRI, allDRIs: Map<String, DRI>): (String) -> DRI? = {
+    private fun createBothMdAndHtmlKeys(x: String) =
+        listOf(
+            if (x.endsWith(".md")) x.removeSuffix(".md").plus(".html") else x,
+            if (x.endsWith(".html")) x.removeSuffix(".html").plus(".md") else x
+        )
+
+    private fun getExternalDriResolver(allDRIs: Map<Path, DRI>, proceededFilePath: String): (String) -> DRI? = { it ->
         try {
             URL(it)
             null
         } catch (e: MalformedURLException) {
-            if (it.endsWith(".html") || it.endsWith(".md")) {
-                it.resolveLinkToFile(dri, allDRIs)
-            } else {
-                it.replace("\\s".toRegex(), "").resolveLinkToApi()
+            val resolvePath = { x: String ->
+                if (it.startsWith('/')) docsFile.resolve(x)
+                else File(proceededFilePath).resolve(x)
             }
+            val path = Path.of(it).normalize().toString()
+                .let { s -> resolvePath(s) }
+                .toString()
+                .removePrefix(File.separator)
+                .replace(File.separatorChar, '.')
+                .let(Path::of)
+
+            allDRIs[path] ?: it.replace("\\s".toRegex(), "").resolveLinkToApi()
         }
     }
-
-    private fun String.resolveLinkToFile(dri: DRI, allDRIs: Map<String, DRI>) =
-        if (startsWith("/")) { // handle root related links
-            replace('/', '.').removePrefix(".")
-
-        } else { // handle relative links
-            val unSuffixedDri = dri.packageName!!.removeSuffix(".html").removeSuffix(".md")
-            val parentDri = unSuffixedDri.take(unSuffixedDri.indexOfLast('.'::equals)).removePrefix("_.")
-            "${parentDri}.${replace('/', '.')}"
-
-        }.let(allDRIs::get)
 
     private fun String.resolveLinkToApi() = when {
         '#' in this -> {
@@ -169,19 +185,19 @@ class StaticSiteContext(val root: File, cxt: DokkaContext) {
             when {
                 "::" in classNameAndRest -> {
                     val (className, callableAndParams) = classNameAndRest.split("::")
-                    makeDRI(callableAndParams, packageName, className)
+                    makeApiDRI(callableAndParams, packageName, className)
                 }
                 else -> DRI(packageName = packageName, classNames = classNameAndRest)
             }
         }
         "::" in this -> {
             val (packageName, callableAndParams) = split("::")
-            makeDRI(callableAndParams, packageName)
+            makeApiDRI(callableAndParams, packageName)
         }
         else -> DRI(packageName = this)
     }
 
-    private fun makeDRI(
+    private fun makeApiDRI(
         callableAndParams: String,
         packageName: String,
         className: String? = null
