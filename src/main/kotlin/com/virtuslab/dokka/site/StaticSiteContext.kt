@@ -15,6 +15,8 @@ import org.jetbrains.dokka.pages.DCI
 import org.jetbrains.dokka.pages.PageNode
 import org.jetbrains.dokka.plugability.DokkaContext
 import java.io.File
+import java.net.MalformedURLException
+import java.net.URL
 
 class StaticSiteContext(val root: File, cxt: DokkaContext) {
     val docsFile = File(root, "docs")
@@ -138,10 +140,15 @@ class StaticSiteContext(val root: File, cxt: DokkaContext) {
     }
 
     private fun getExternalDriResolver(dri: DRI, allDRIs: Map<String, DRI>): (String) -> DRI? = {
-        if (it.endsWith(".html") || it.endsWith(".md")) {
-            it.resolveLinkToFile(dri, allDRIs)
-        } else {
-            it.replace("\\s".toRegex(), "").resolveLinkToApi()
+        try {
+            URL(it)
+            null
+        } catch (e: MalformedURLException) {
+            if (it.endsWith(".html") || it.endsWith(".md")) {
+                it.resolveLinkToFile(dri, allDRIs)
+            } else {
+                it.replace("\\s".toRegex(), "").resolveLinkToApi()
+            }
         }
     }
 
