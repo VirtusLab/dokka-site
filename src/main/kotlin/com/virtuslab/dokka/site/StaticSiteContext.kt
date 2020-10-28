@@ -32,6 +32,11 @@ class StaticSiteContext(val root: File, cxt: DokkaContext) {
         dirs.map { loadTemplateFile(it) }.map { it.name() to it }.toMap()
     }
 
+    private val includes: Map<String, String> by lazy {
+        val includeRoot = File(root, "_includes")
+        val dirs: Array<File> = includeRoot.listFiles() ?: emptyArray()
+        dirs.map { loadTemplateFile(it) }.map { it.file.name to it.rawCode }.toMap()
+    }
 
     private fun isValidTemplate(file: File): Boolean =
         (file.isDirectory && !file.name.startsWith("_")) ||
@@ -124,7 +129,13 @@ class StaticSiteContext(val root: File, cxt: DokkaContext) {
                 val properties = myTemplate.templateFile.layout()
                     ?.let { mapOf("content" to myTemplate.templateFile.rawCode) } ?: emptyMap()
 
-                myTemplate.templateFile.resolveMarkdown(RenderingContext(properties, layouts))
+                val ctx = RenderingContext(
+                    properties = properties,
+                    layouts = layouts,
+                    includes = includes
+                )
+
+                myTemplate.templateFile.resolveMarkdown(ctx)
             } catch (e: Throwable) {
                 val msg = "Error rendering $myTemplate: ${e.message}"
                 println("ERROR: $msg") // TODO (#14): provide proper error handling
