@@ -2,7 +2,9 @@ package com.virtuslab.dokka.site
 
 import org.jetbrains.dokka.base.parsers.MarkdownParser
 import org.jetbrains.dokka.base.transformers.pages.comments.DocTagToContentConverter
+import org.jetbrains.dokka.links.Callable
 import org.jetbrains.dokka.links.DRI
+import org.jetbrains.dokka.links.JavaClassReference
 import org.jetbrains.dokka.model.doc.DocTag
 import org.jetbrains.dokka.model.doc.Text
 import org.jetbrains.dokka.model.properties.PropertyContainer
@@ -66,17 +68,8 @@ class StaticSiteContext(val root: File, cxt: DokkaContext) {
 
     private fun parseMarkdown(page: PreResolvedPage, dri: DRI, allDRIs: Map<String, DRI>): ContentNode {
         val nodes = if (page.hasMarkdown) {
-            val parser = MarkdownParser { link ->
-                val driKey = if (link.startsWith("/")) {
-                    // handle root related links
-                    link.replace('/', '.').removePrefix(".")
-                } else {
-                    val unSuffixedDri = dri.packageName!!.removeSuffix(".html").removeSuffix(".md")
-                    val parentDri = unSuffixedDri.take(unSuffixedDri.indexOfLast('.'::equals)).removePrefix("_.")
-                    "${parentDri}.${link.replace('/', '.')}"
-                }
-                allDRIs[driKey]
-            }
+            val externalDri = getExternalDriResolver(dri, allDRIs)
+            val parser = MarkdownParser(externalDri)
 
             val docTag = try {
                 parser.parseStringToDocNode(page.code)
@@ -131,7 +124,7 @@ class StaticSiteContext(val root: File, cxt: DokkaContext) {
                 PreResolvedPage("", null, true)
             }
             val content = parseMarkdown(page, dri, driMap)
-            val children = myTemplate.children.map { templateToPage(it) }
+            val children = myTemplate.children.map(::templateToPage)
             return BaseStaticSiteProcessor.StaticPageNode(
                 myTemplate.templateFile.title(),
                 children + customChildren,
@@ -141,7 +134,59 @@ class StaticSiteContext(val root: File, cxt: DokkaContext) {
                 content
             )
         }
-        return all.map { templateToPage(it) }
+        return all.map(::templateToPage)
+    }
+
+    private fun getExternalDriResolver(dri: DRI, allDRIs: Map<String, DRI>): (String) -> DRI? = {
+        if (it.endsWith(".html") || it.endsWith(".md")) {
+            it.resolveLinkToFile(dri, allDRIs)
+        } else {
+            it.replace("\\s".toRegex(), "").resolveLinkToApi()
+        }
+    }
+
+    private fun String.resolveLinkToFile(dri: DRI, allDRIs: Map<String, DRI>) =
+        if (startsWith("/")) { // handle root related links
+            replace('/', '.').removePrefix(".")
+
+        } else { // handle relative links
+            val unSuffixedDri = dri.packageName!!.removeSuffix(".html").removeSuffix(".md")
+            val parentDri = unSuffixedDri.take(unSuffixedDri.indexOfLast('.'::equals)).removePrefix("_.")
+            "${parentDri}.${replace('/', '.')}"
+
+        }.let(allDRIs::get)
+
+    private fun String.resolveLinkToApi() = when {
+        '#' in this -> {
+            val (packageName, classNameAndRest) = split('#')
+            when {
+                "::" in classNameAndRest -> {
+                    val (className, callableAndParams) = classNameAndRest.split("::")
+                    makeDRI(callableAndParams, packageName, className)
+                }
+                else -> DRI(packageName = packageName, classNames = classNameAndRest)
+            }
+        }
+        "::" in this -> {
+            val (packageName, callableAndParams) = split("::")
+            makeDRI(callableAndParams, packageName)
+        }
+        else -> DRI(packageName = this)
+    }
+
+    private fun makeDRI(
+        callableAndParams: String,
+        packageName: String,
+        className: String? = null
+    ): DRI {
+        val callableName = callableAndParams.takeWhile { it != '(' }
+        val params = callableAndParams.dropWhile { it != '(' }
+            .removePrefix("(")
+            .removeSuffix(")")
+            .split(',')
+            .filter(String::isNotBlank)
+            .map(::JavaClassReference)
+        val callable = Callable(name = callableName, params = params)
+        return DRI(packageName = packageName, classNames = className, callable = callable)
     }
 }
-
